@@ -1,68 +1,42 @@
-// lib/models/user_model.dart
-import 'package:cloud_firestore/cloud_firestore.dart';
-
+// Ini cuma model data biasa, tidak perlu import Firebase lagi.
 class UserModel {
-  final String uid;
-  final String name;
-  final String email;
-  final String phoneNumber;
-  final DateTime createdAt;
+  String? uId;
+  String? uName;
+  String? uEmail;
+  String? uPassword;
+  String? uPhone;
+  String? uAddress;
 
   UserModel({
-    required this.uid,
-    required this.name,
-    required this.email,
-    required this.phoneNumber,
-    required this.createdAt,
+    this.uId,
+    this.uName,
+    this.uEmail,
+    this.uPassword,
+    this.uPhone,
+    this.uAddress,
   });
 
-  // Convert UserModel to JSON (for Firestore)
-  Map<String, dynamic> toJson() {
+  // Konversi dari Map (Database Lokal) ke Object
+  factory UserModel.fromMap(Map<String, dynamic> map) {
+    return UserModel(
+      uId: map['uId'],
+      uName: map['uName'],
+      uEmail: map['uEmail'],
+      uPassword: map['uPassword'],
+      uPhone: map['uPhone'],
+      uAddress: map['uAddress'],
+    );
+  }
+
+  // Konversi dari Object ke Map (Untuk disimpan)
+  Map<String, dynamic> toMap() {
     return {
-      'uid': uid,
-      'name': name,
-      'email': email,
-      'phoneNumber': phoneNumber,
-      'createdAt': Timestamp.fromDate(createdAt),
+      'uId': uId,
+      'uName': uName,
+      'uEmail': uEmail,
+      'uPassword': uPassword,
+      'uPhone': uPhone,
+      'uAddress': uAddress,
     };
-  }
-
-  // Create UserModel from JSON (from Firestore)
-  factory UserModel.fromJson(Map<String, dynamic> json) {
-    return UserModel(
-      uid: json['uid'] ?? '',
-      name: json['name'] ?? '',
-      email: json['email'] ?? '',
-      phoneNumber: json['phoneNumber'] ?? '',
-      createdAt: (json['createdAt'] as Timestamp).toDate(),
-    );
-  }
-
-  // Create UserModel from Firestore DocumentSnapshot
-  factory UserModel.fromSnapshot(DocumentSnapshot snapshot) {
-    final data = snapshot.data() as Map<String, dynamic>;
-    return UserModel.fromJson(data);
-  }
-
-  // Copy with method (untuk update data)
-  UserModel copyWith({
-    String? uid,
-    String? name,
-    String? email,
-    String? phoneNumber,
-    DateTime? createdAt,
-  }) {
-    return UserModel(
-      uid: uid ?? this.uid,
-      name: name ?? this.name,
-      email: email ?? this.email,
-      phoneNumber: phoneNumber ?? this.phoneNumber,
-      createdAt: createdAt ?? this.createdAt,
-    );
-  }
-
-  @override
-  String toString() {
-    return 'UserModel(uid: $uid, name: $name, email: $email, phoneNumber: $phoneNumber, createdAt: $createdAt)';
   }
 }
