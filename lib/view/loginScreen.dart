@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../controller/auth_controller.dart'; // Pastikan nama file controller sesuai
 import 'registerScreen.dart';
-import 'halaman_utama.dart';
+import 'package:preloved_mobile_app/view/halaman_utama.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -53,7 +53,7 @@ class _LoginPageState extends State<LoginPage> {
       if (berhasil) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const HalamanUtama()),
+          MaterialPageRoute(builder: (context) => const HomePage()),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(

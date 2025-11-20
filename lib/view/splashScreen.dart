@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import '../controller/auth_controller.dart';
 import 'loginScreen.dart';
-import 'halaman_utama.dart'; 
+import 'package:preloved_mobile_app/view/halaman_utama.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -67,7 +67,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     if (isLogin) {
       Navigator.pushReplacement(
         context, 
-        MaterialPageRoute(builder: (context) => const HalamanUtama()),
+        MaterialPageRoute(builder: (context) => const HomePage()),
       );
     } else {
       Navigator.pushReplacement(
