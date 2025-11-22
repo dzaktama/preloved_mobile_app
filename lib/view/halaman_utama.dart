@@ -1,6 +1,7 @@
 // lib/views/home_page.dart
 import 'package:flutter/material.dart';
 import '../controller/home_controller.dart';
+import '../controller/controller_cart.dart';
 import '../model/product_model.dart';
 import 'package:preloved_mobile_app/view/profil/profile.dart';
 import 'package:preloved_mobile_app/view/cart.dart';
@@ -15,10 +16,12 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final HomeController _controller = HomeController();
+  final ControllerCart _controllerCart = ControllerCart();
   final TextEditingController _searchController = TextEditingController();
 
   Set<String> favoriteProducts = {};
   Map<String, int> cartItems = {};
+  int _cartItemCount = 0;
 
   static const Color primaryColor = Color(0xFFE84118);
   static const Color secondaryColor = Color(0xFFFF6348);
@@ -32,6 +35,7 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _loadData();
+    _loadCart();
   }
 
   Future<void> _loadData() async {
@@ -40,8 +44,18 @@ class _HomePageState extends State<HomePage> {
     setState(() {});
   }
 
+  Future<void> _loadCart() async {
+    final cart = await _controllerCart.ambilSemuaCart();
+    final count = await _controllerCart.hitungTotalItem();
+    setState(() {
+      cartItems = cart;
+      _cartItemCount = count;
+    });
+  }
+
   Future<void> _refreshData() async {
     await _controller.refreshData();
+    await _loadCart();
     setState(() {});
   }
 
@@ -57,14 +71,9 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  void _addToCart(ProductModel product) {
-    setState(() {
-      if (cartItems.containsKey(product.id)) {
-        cartItems[product.id] = cartItems[product.id]! + 1;
-      } else {
-        cartItems[product.id] = 1;
-      }
-    });
+  void _addToCart(ProductModel product) async {
+    await _controllerCart.tambahKeCart(product.id, 1);
+    await _loadCart();
     _showSnackBar('Added to cart', Icons.shopping_cart, isSuccess: true);
   }
 
@@ -296,24 +305,23 @@ class _HomePageState extends State<HomePage> {
             children: [
               IconButton(
                 icon: const Icon(Icons.shopping_bag_outlined, color: textDark),
-                onPressed: () {
-                  Navigator.push(
+                onPressed: () async {
+                  await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) => CartPage(
                         cartItems: cartItems,
                         allProducts: _controller.allProducts,
-                        onUpdateCart: (updatedCart) {
-                          setState(() {
-                            cartItems = updatedCart;
-                          });
+                        onUpdateCart: (updatedCart) async {
+                          await _loadCart();
                         },
                       ),
                     ),
                   );
+                  await _loadCart();
                 },
               ),
-              if (cartItems.isNotEmpty)
+              if (_cartItemCount > 0)
                 Positioned(
                   right: 8,
                   top: 8,
@@ -328,7 +336,7 @@ class _HomePageState extends State<HomePage> {
                       minHeight: 16,
                     ),
                     child: Text(
-                      '${cartItems.length}',
+                      '$_cartItemCount',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 10,
@@ -513,8 +521,7 @@ class _HomePageState extends State<HomePage> {
                                 gridDelegate:
                                     const SliverGridDelegateWithFixedCrossAxisCount(
                                   crossAxisCount: 2,
-                                  childAspectRatio:
-                                      0.72, // ⬅️ NAIKIN dari 0.68 jadi 0.72
+                                  childAspectRatio: 0.72,
                                   crossAxisSpacing: 12,
                                   mainAxisSpacing: 12,
                                 ),
@@ -558,7 +565,6 @@ class _HomePageState extends State<HomePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Gambar produk dengan tombol favorite
             Stack(
               children: [
                 ClipRRect(
@@ -566,7 +572,7 @@ class _HomePageState extends State<HomePage> {
                       const BorderRadius.vertical(top: Radius.circular(12)),
                   child: Image.network(
                     product.linkGambar,
-                    height: 120, // Dikurangi dari 140 jadi 120
+                    height: 120,
                     width: double.infinity,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) {
@@ -607,35 +613,29 @@ class _HomePageState extends State<HomePage> {
                 ),
               ],
             ),
-
-            // Konten produk
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.all(8), // Dikurangi dari 10 jadi 8
+                padding: const EdgeInsets.all(8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Brand
                     Text(
                       product.brand,
                       style: const TextStyle(
-                        fontSize: 9, // Dikurangi dari 10
+                        fontSize: 9,
                         color: textLight,
                         fontWeight: FontWeight.w500,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-
                     const SizedBox(height: 2),
-
-                    // Nama produk
                     Flexible(
                       child: Text(
                         product.namaBarang,
                         style: const TextStyle(
-                          fontSize: 11, // Dikurangi dari 12
+                          fontSize: 11,
                           fontWeight: FontWeight.w600,
                           color: textDark,
                           height: 1.2,
@@ -644,24 +644,18 @@ class _HomePageState extends State<HomePage> {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-
                     const SizedBox(height: 4),
-
-                    // Harga
                     Text(
                       product.harga,
                       style: const TextStyle(
-                        fontSize: 12, // Dikurangi dari 14
+                        fontSize: 12,
                         fontWeight: FontWeight.bold,
                         color: primaryColor,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-
                     const SizedBox(height: 4),
-
-                    // Kondisi
                     Row(
                       children: [
                         Icon(Icons.star, size: 10, color: Colors.amber[700]),
@@ -670,7 +664,7 @@ class _HomePageState extends State<HomePage> {
                           child: Text(
                             product.kondisi,
                             style: const TextStyle(
-                              fontSize: 9, // Dikurangi dari 10
+                              fontSize: 9,
                               color: textLight,
                             ),
                             maxLines: 1,

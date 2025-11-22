@@ -23,10 +23,10 @@ class UserModel extends HiveObject {
   String? uAddress;
 
   @HiveField(6)
-  String? uFotoProfil;
+  String? uFotoProfil; // TAMBAHAN BARU
 
   @HiveField(7)
-  String? uRole;
+  String? uRole; // TAMBAHAN BARU
 
   UserModel({
     this.uId,
@@ -36,7 +36,7 @@ class UserModel extends HiveObject {
     this.uPhone,
     this.uAddress,
     this.uFotoProfil,
-    this.uRole = 'user',
+    this.uRole = 'user', // Default role
   });
 
   factory UserModel.fromMap(Map<String, dynamic> map) {
@@ -48,7 +48,7 @@ class UserModel extends HiveObject {
       uPhone: map['uPhone'],
       uAddress: map['uAddress'],
       uFotoProfil: map['uFotoProfil'],
-      uRole: map['uRole'],
+      uRole: map['uRole'] ?? 'user',
     );
   }
 
