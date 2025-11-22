@@ -1,8 +1,19 @@
-// lib/views/profile_page.dart
 import 'package:flutter/material.dart';
+import '../../controller/auth_controller.dart';
+import '../../model/userModel.dart';
+import '../loginScreen.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({Key? key}) : super(key: key);
+
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  final AuthController _authController = AuthController();
+  UserModel? _currentUser;
+  bool _isLoading = true;
 
   static const Color primaryColor = Color(0xFFE84118);
   static const Color backgroundColor = Color(0xFFFAFAFA);
@@ -10,7 +21,35 @@ class ProfilePage extends StatelessWidget {
   static const Color textLight = Color(0xFF57606F);
 
   @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final user = await _authController.getUserLogin();
+    setState(() {
+      _currentUser = user;
+      _isLoading = false;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: backgroundColor,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_currentUser == null) {
+      return const Scaffold(
+        backgroundColor: backgroundColor,
+        body: Center(child: Text('Session expired. Please login again.')),
+      );
+    }
+
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
@@ -32,7 +71,7 @@ class ProfilePage extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.edit_outlined, color: textDark),
             onPressed: () {
-              // TODO: Edit profile
+              // TODO: Navigate ke Edit Profile
             },
           ),
         ],
@@ -40,14 +79,12 @@ class ProfilePage extends StatelessWidget {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Profile Header
             Container(
               width: double.infinity,
               color: Colors.white,
               padding: const EdgeInsets.all(24),
               child: Column(
                 children: [
-                  // Profile picture
                   Container(
                     width: 100,
                     height: 100,
@@ -63,28 +100,23 @@ class ProfilePage extends StatelessWidget {
                       ],
                     ),
                     child: ClipOval(
-                      child: Image.network(
-                        'https://ui-avatars.com/api/?name=John+Doe&background=E84118&color=fff&size=200',
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            color: primaryColor.withOpacity(0.1),
-                            child: const Icon(
-                              Icons.person,
-                              size: 50,
-                              color: primaryColor,
-                            ),
-                          );
-                        },
-                      ),
+                      child: _currentUser?.uFotoProfil != null && 
+                             _currentUser!.uFotoProfil!.isNotEmpty
+                          ? Image.network(
+                              _currentUser!.uFotoProfil!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return _buildDefaultAvatar();
+                              },
+                            )
+                          : _buildDefaultAvatar(),
                     ),
                   ),
                   const SizedBox(height: 16),
                   
-                  // Name
-                  const Text(
-                    'John Doe',
-                    style: TextStyle(
+                  Text(
+                    _currentUser?.uName ?? 'User',
+                    style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                       color: textDark,
@@ -92,9 +124,8 @@ class ProfilePage extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   
-                  // Email
                   Text(
-                    'john.doe@example.com',
+                    _currentUser?.uEmail ?? 'No email',
                     style: TextStyle(
                       fontSize: 14,
                       color: textLight,
@@ -102,7 +133,6 @@ class ProfilePage extends StatelessWidget {
                   ),
                   const SizedBox(height: 20),
                   
-                  // Stats
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
@@ -127,7 +157,6 @@ class ProfilePage extends StatelessWidget {
             
             const SizedBox(height: 12),
             
-            // Menu sections
             Container(
               color: Colors.white,
               child: Column(
@@ -136,12 +165,14 @@ class ProfilePage extends StatelessWidget {
                     icon: Icons.person_outline,
                     title: 'Edit Profile',
                     subtitle: 'Update your personal information',
-                    onTap: () {},
+                    onTap: () {
+                      // TODO: Navigate ke Edit Profile
+                    },
                   ),
                   _buildMenuItem(
                     icon: Icons.location_on_outlined,
                     title: 'Addresses',
-                    subtitle: 'Manage your delivery addresses',
+                    subtitle: _currentUser?.uAddress ?? 'Add your address',
                     onTap: () {},
                   ),
                   _buildMenuItem(
@@ -206,7 +237,6 @@ class ProfilePage extends StatelessWidget {
             
             const SizedBox(height: 12),
             
-            // Logout button
             Container(
               width: double.infinity,
               color: Colors.white,
@@ -236,7 +266,6 @@ class ProfilePage extends StatelessWidget {
             
             const SizedBox(height: 24),
             
-            // Version
             Text(
               'Version 1.0.0',
               style: TextStyle(
@@ -246,6 +275,22 @@ class ProfilePage extends StatelessWidget {
             ),
             const SizedBox(height: 24),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDefaultAvatar() {
+    return Container(
+      color: primaryColor.withOpacity(0.1),
+      child: Center(
+        child: Text(
+          _currentUser?.uName?.substring(0, 1).toUpperCase() ?? 'U',
+          style: const TextStyle(
+            fontSize: 40,
+            fontWeight: FontWeight.bold,
+            color: primaryColor,
+          ),
         ),
       ),
     );
@@ -344,9 +389,15 @@ class ProfilePage extends StatelessWidget {
             ),
           ),
           ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pop(context);
+            onPressed: () async {
+              await _authController.logout();
+              
+              if (!context.mounted) return;
+              
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (context) => const LoginPage()),
+                (route) => false,
+              );
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,

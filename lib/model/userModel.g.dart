@@ -1,47 +1,53 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'akun_user_model.dart';
+part of 'userModel.dart';
 
 // **************************************************************************
 // TypeAdapterGenerator
 // **************************************************************************
 
-class AkunUserModelAdapter extends TypeAdapter<AkunUserModel> {
+class UserModelAdapter extends TypeAdapter<UserModel> {
   @override
   final int typeId = 0;
 
   @override
-  AkunUserModel read(BinaryReader reader) {
+  UserModel read(BinaryReader reader) {
     final numOfFields = reader.readByte();
     final fields = <int, dynamic>{
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
-    return AkunUserModel(
-      username: fields[0] as String,
-      email: fields[1] as String,
-      password: fields[2] as String,
-      noHp: fields[3] as String,
-      fotoProfil: fields[4] as String,
-      role: fields[5] as String,
+    return UserModel(
+      uId: fields[0] as String?,
+      uName: fields[1] as String?,
+      uEmail: fields[2] as String?,
+      uPassword: fields[3] as String?,
+      uPhone: fields[4] as String?,
+      uAddress: fields[5] as String?,
+      uFotoProfil: fields[6] as String?,
+      uRole: fields[7] as String?,
     );
   }
 
   @override
-  void write(BinaryWriter writer, AkunUserModel obj) {
+  void write(BinaryWriter writer, UserModel obj) {
     writer
-      ..writeByte(6)
+      ..writeByte(8)
       ..writeByte(0)
-      ..write(obj.username)
+      ..write(obj.uId)
       ..writeByte(1)
-      ..write(obj.email)
+      ..write(obj.uName)
       ..writeByte(2)
-      ..write(obj.password)
+      ..write(obj.uEmail)
       ..writeByte(3)
-      ..write(obj.noHp)
+      ..write(obj.uPassword)
       ..writeByte(4)
-      ..write(obj.fotoProfil)
+      ..write(obj.uPhone)
       ..writeByte(5)
-      ..write(obj.role);
+      ..write(obj.uAddress)
+      ..writeByte(6)
+      ..write(obj.uFotoProfil)
+      ..writeByte(7)
+      ..write(obj.uRole);
   }
 
   @override
@@ -50,7 +56,7 @@ class AkunUserModelAdapter extends TypeAdapter<AkunUserModel> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is AkunUserModelAdapter &&
+      other is UserModelAdapter &&
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }

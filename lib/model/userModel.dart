@@ -1,11 +1,32 @@
-// Ini cuma model data biasa, tidak perlu import Firebase lagi.
-class UserModel {
+import 'package:hive/hive.dart';
+
+part 'userModel.g.dart';
+
+@HiveType(typeId: 0)
+class UserModel extends HiveObject {
+  @HiveField(0)
   String? uId;
+
+  @HiveField(1)
   String? uName;
+
+  @HiveField(2)
   String? uEmail;
+
+  @HiveField(3)
   String? uPassword;
+
+  @HiveField(4)
   String? uPhone;
+
+  @HiveField(5)
   String? uAddress;
+
+  @HiveField(6)
+  String? uFotoProfil;
+
+  @HiveField(7)
+  String? uRole;
 
   UserModel({
     this.uId,
@@ -14,9 +35,10 @@ class UserModel {
     this.uPassword,
     this.uPhone,
     this.uAddress,
+    this.uFotoProfil,
+    this.uRole = 'user',
   });
 
-  // Konversi dari Map (Database Lokal) ke Object
   factory UserModel.fromMap(Map<String, dynamic> map) {
     return UserModel(
       uId: map['uId'],
@@ -25,10 +47,11 @@ class UserModel {
       uPassword: map['uPassword'],
       uPhone: map['uPhone'],
       uAddress: map['uAddress'],
+      uFotoProfil: map['uFotoProfil'],
+      uRole: map['uRole'],
     );
   }
 
-  // Konversi dari Object ke Map (Untuk disimpan)
   Map<String, dynamic> toMap() {
     return {
       'uId': uId,
@@ -37,6 +60,8 @@ class UserModel {
       'uPassword': uPassword,
       'uPhone': uPhone,
       'uAddress': uAddress,
+      'uFotoProfil': uFotoProfil,
+      'uRole': uRole,
     };
   }
 }
