@@ -16,12 +16,10 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final HomeController _controller = HomeController();
   final TextEditingController _searchController = TextEditingController();
-  
-  // Favorites and Cart
+
   Set<String> favoriteProducts = {};
-  Map<String, int> cartItems = {}; // productId: quantity
-  
-  // Colors
+  Map<String, int> cartItems = {};
+
   static const Color primaryColor = Color(0xFFE84118);
   static const Color secondaryColor = Color(0xFFFF6348);
   static const Color backgroundColor = Color(0xFFFAFAFA);
@@ -127,8 +125,6 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
               const SizedBox(height: 20),
-              
-              // Categories
               const Text(
                 'Category',
                 style: TextStyle(
@@ -160,10 +156,7 @@ class _HomePageState extends State<HomePage> {
                   );
                 }).toList(),
               ),
-              
               const SizedBox(height: 24),
-              
-              // Sort
               const Text(
                 'Sort By',
                 style: TextStyle(
@@ -174,14 +167,13 @@ class _HomePageState extends State<HomePage> {
               ),
               const SizedBox(height: 12),
               _buildSortOption('Default', 'default', setModalState),
-              _buildSortOption('Price: Low to High', 'price_low_to_high', setModalState),
-              _buildSortOption('Price: High to Low', 'price_high_to_low', setModalState),
+              _buildSortOption(
+                  'Price: Low to High', 'price_low_to_high', setModalState),
+              _buildSortOption(
+                  'Price: High to Low', 'price_high_to_low', setModalState),
               _buildSortOption('Name: A-Z', 'name_a_to_z', setModalState),
               _buildSortOption('Name: Z-A', 'name_z_to_a', setModalState),
-              
               const SizedBox(height: 24),
-              
-              // Apply button
               SizedBox(
                 width: double.infinity,
                 height: 48,
@@ -213,7 +205,8 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildSortOption(String label, String value, StateSetter setModalState) {
+  Widget _buildSortOption(
+      String label, String value, StateSetter setModalState) {
     final isSelected = _controller.selectedSort == value;
     return RadioListTile<String>(
       title: Text(
@@ -255,7 +248,6 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
         actions: [
-          // Favorites
           Stack(
             children: [
               IconButton(
@@ -300,7 +292,6 @@ class _HomePageState extends State<HomePage> {
                 ),
             ],
           ),
-          // Cart
           Stack(
             children: [
               IconButton(
@@ -349,7 +340,6 @@ class _HomePageState extends State<HomePage> {
                 ),
             ],
           ),
-          // Profile
           IconButton(
             icon: const Icon(Icons.person_outline, color: textDark),
             onPressed: () {
@@ -373,7 +363,6 @@ class _HomePageState extends State<HomePage> {
                   color: primaryColor,
                   child: CustomScrollView(
                     slivers: [
-                      // Search bar
                       SliverToBoxAdapter(
                         child: Container(
                           color: Colors.white,
@@ -406,7 +395,8 @@ class _HomePageState extends State<HomePage> {
                                         size: 20,
                                       ),
                                       border: InputBorder.none,
-                                      contentPadding: const EdgeInsets.symmetric(
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
                                         horizontal: 16,
                                         vertical: 12,
                                       ),
@@ -442,8 +432,6 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ),
                       ),
-
-                      // Categories horizontal scroll
                       SliverToBoxAdapter(
                         child: Container(
                           height: 50,
@@ -454,7 +442,8 @@ class _HomePageState extends State<HomePage> {
                             itemCount: _controller.categories.length,
                             itemBuilder: (context, index) {
                               final category = _controller.categories[index];
-                              final isSelected = _controller.selectedCategory == category;
+                              final isSelected =
+                                  _controller.selectedCategory == category;
                               return Padding(
                                 padding: const EdgeInsets.only(right: 8),
                                 child: ChoiceChip(
@@ -471,20 +460,19 @@ class _HomePageState extends State<HomePage> {
                                     fontWeight: FontWeight.w600,
                                     fontSize: 13,
                                   ),
-                                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12),
                                 ),
                               );
                             },
                           ),
                         ),
                       ),
-
                       const SliverToBoxAdapter(child: SizedBox(height: 8)),
-
-                      // Product count
                       SliverToBoxAdapter(
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
                           child: Text(
                             '${_controller.displayedProducts.length} products found',
                             style: const TextStyle(
@@ -495,8 +483,6 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ),
                       ),
-
-                      // Products grid
                       _controller.displayedProducts.isEmpty
                           ? const SliverFillRemaining(
                               child: Center(
@@ -524,9 +510,11 @@ class _HomePageState extends State<HomePage> {
                           : SliverPadding(
                               padding: const EdgeInsets.all(16),
                               sliver: SliverGrid(
-                                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                gridDelegate:
+                                    const SliverGridDelegateWithFixedCrossAxisCount(
                                   crossAxisCount: 2,
-                                  childAspectRatio: 0.68,
+                                  childAspectRatio:
+                                      0.72, // ⬅️ NAIKIN dari 0.68 jadi 0.72
                                   crossAxisSpacing: 12,
                                   mainAxisSpacing: 12,
                                 ),
@@ -536,7 +524,8 @@ class _HomePageState extends State<HomePage> {
                                       _controller.displayedProducts[index],
                                     );
                                   },
-                                  childCount: _controller.displayedProducts.length,
+                                  childCount:
+                                      _controller.displayedProducts.length,
                                 ),
                               ),
                             ),
@@ -548,7 +537,7 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildProductCard(ProductModel product) {
     final isFavorite = favoriteProducts.contains(product.id);
-    
+
     return InkWell(
       onTap: () {
         _showProductDetail(product);
@@ -569,47 +558,48 @@ class _HomePageState extends State<HomePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Product image with favorite button
+            // Gambar produk dengan tombol favorite
             Stack(
               children: [
                 ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(12)),
                   child: Image.network(
                     product.linkGambar,
-                    height: 140,
+                    height: 120, // Dikurangi dari 140 jadi 120
                     width: double.infinity,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) {
                       return Container(
-                        height: 140,
+                        height: 120,
                         color: Colors.grey[200],
-                        child: const Icon(Icons.image_not_supported, size: 40, color: textLight),
+                        child: const Icon(Icons.image_not_supported,
+                            size: 32, color: textLight),
                       );
                     },
                   ),
                 ),
-                // Favorite button
                 Positioned(
-                  top: 8,
-                  right: 8,
+                  top: 6,
+                  right: 6,
                   child: GestureDetector(
                     onTap: () => _toggleFavorite(product.id),
                     child: Container(
-                      padding: const EdgeInsets.all(6),
+                      padding: const EdgeInsets.all(5),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withOpacity(0.1),
-                            blurRadius: 8,
+                            blurRadius: 6,
                             offset: const Offset(0, 2),
                           ),
                         ],
                       ),
                       child: Icon(
                         isFavorite ? Icons.favorite : Icons.favorite_border,
-                        size: 18,
+                        size: 16,
                         color: isFavorite ? primaryColor : textLight,
                       ),
                     ),
@@ -617,68 +607,70 @@ class _HomePageState extends State<HomePage> {
                 ),
               ],
             ),
-            
+
+            // Konten produk
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(8), // Dikurangi dari 10 jadi 8
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     // Brand
                     Text(
                       product.brand,
                       style: const TextStyle(
-                        fontSize: 10,
+                        fontSize: 9, // Dikurangi dari 10
                         color: textLight,
                         fontWeight: FontWeight.w500,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    
-                    const SizedBox(height: 4),
-                    
-                    // Product name
-                    Expanded(
+
+                    const SizedBox(height: 2),
+
+                    // Nama produk
+                    Flexible(
                       child: Text(
                         product.namaBarang,
                         style: const TextStyle(
-                          fontSize: 12,
+                          fontSize: 11, // Dikurangi dari 12
                           fontWeight: FontWeight.w600,
                           color: textDark,
-                          height: 1.3,
+                          height: 1.2,
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    
-                    const SizedBox(height: 6),
-                    
-                    // Price
+
+                    const SizedBox(height: 4),
+
+                    // Harga
                     Text(
                       product.harga,
                       style: const TextStyle(
-                        fontSize: 14,
+                        fontSize: 12, // Dikurangi dari 14
                         fontWeight: FontWeight.bold,
                         color: primaryColor,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    
-                    const SizedBox(height: 6),
-                    
-                    // Condition
+
+                    const SizedBox(height: 4),
+
+                    // Kondisi
                     Row(
                       children: [
-                        Icon(Icons.star, size: 11, color: Colors.amber[700]),
-                        const SizedBox(width: 4),
+                        Icon(Icons.star, size: 10, color: Colors.amber[700]),
+                        const SizedBox(width: 3),
                         Expanded(
                           child: Text(
                             product.kondisi,
                             style: const TextStyle(
-                              fontSize: 10,
+                              fontSize: 9, // Dikurangi dari 10
                               color: textLight,
                             ),
                             maxLines: 1,
@@ -742,7 +734,7 @@ class _HomePageState extends State<HomePage> {
 
   void _showProductDetail(ProductModel product) {
     final isFavorite = favoriteProducts.contains(product.id);
-    
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -775,8 +767,6 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      
-                      // Product image with favorite
                       Stack(
                         children: [
                           ClipRRect(
@@ -786,13 +776,15 @@ class _HomePageState extends State<HomePage> {
                               height: 300,
                               width: double.infinity,
                               fit: BoxFit.cover,
-                              loadingBuilder: (context, child, loadingProgress) {
+                              loadingBuilder:
+                                  (context, child, loadingProgress) {
                                 if (loadingProgress == null) return child;
                                 return Container(
                                   height: 300,
                                   color: Colors.grey[200],
                                   child: const Center(
-                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2),
                                   ),
                                 );
                               },
@@ -800,7 +792,8 @@ class _HomePageState extends State<HomePage> {
                                 return Container(
                                   height: 300,
                                   color: Colors.grey[200],
-                                  child: const Icon(Icons.image_not_supported, size: 56, color: Colors.grey),
+                                  child: const Icon(Icons.image_not_supported,
+                                      size: 56, color: Colors.grey),
                                 );
                               },
                             ),
@@ -828,7 +821,9 @@ class _HomePageState extends State<HomePage> {
                                   ],
                                 ),
                                 child: Icon(
-                                  isFavorite ? Icons.favorite : Icons.favorite_border,
+                                  isFavorite
+                                      ? Icons.favorite
+                                      : Icons.favorite_border,
                                   size: 24,
                                   color: isFavorite ? primaryColor : textLight,
                                 ),
@@ -837,10 +832,7 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ],
                       ),
-                      
                       const SizedBox(height: 20),
-                      
-                      // Brand & Category
                       Row(
                         children: [
                           Chip(
@@ -864,10 +856,7 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ],
                       ),
-                      
                       const SizedBox(height: 12),
-                      
-                      // Product name
                       Text(
                         product.namaBarang,
                         style: const TextStyle(
@@ -876,10 +865,7 @@ class _HomePageState extends State<HomePage> {
                           color: textDark,
                         ),
                       ),
-                      
                       const SizedBox(height: 16),
-                      
-                      // Price
                       Text(
                         product.harga,
                         style: const TextStyle(
@@ -888,18 +874,12 @@ class _HomePageState extends State<HomePage> {
                           color: primaryColor,
                         ),
                       ),
-                      
                       const SizedBox(height: 24),
-                      
-                      // Details
                       _buildDetailRow('Condition', product.kondisi),
                       _buildDetailRow('Size', product.ukuran),
                       _buildDetailRow('Material', product.bahan),
                       _buildDetailRow('Location', product.lokasi),
-                      
                       const SizedBox(height: 24),
-                      
-                      // Description
                       const Text(
                         'Description',
                         style: TextStyle(
@@ -917,13 +897,10 @@ class _HomePageState extends State<HomePage> {
                           height: 1.6,
                         ),
                       ),
-                      
-                      const SizedBox(height: 100), // Space for bottom buttons
+                      const SizedBox(height: 100),
                     ],
                   ),
                 ),
-                
-                // Bottom action buttons
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -938,7 +915,6 @@ class _HomePageState extends State<HomePage> {
                   ),
                   child: Row(
                     children: [
-                      // Add to Cart button
                       Expanded(
                         child: SizedBox(
                           height: 52,
@@ -947,7 +923,8 @@ class _HomePageState extends State<HomePage> {
                               _addToCart(product);
                               Navigator.pop(context);
                             },
-                            icon: const Icon(Icons.shopping_cart_outlined, size: 20),
+                            icon: const Icon(Icons.shopping_cart_outlined,
+                                size: 20),
                             label: const Text(
                               'Add to Cart',
                               style: TextStyle(
@@ -957,7 +934,8 @@ class _HomePageState extends State<HomePage> {
                             ),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: primaryColor,
-                              side: const BorderSide(color: primaryColor, width: 2),
+                              side: const BorderSide(
+                                  color: primaryColor, width: 2),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
@@ -966,7 +944,6 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      // Buy Now button
                       Expanded(
                         child: SizedBox(
                           height: 52,
@@ -1114,7 +1091,9 @@ class _HomePageState extends State<HomePage> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              _showSnackBar('Purchase successful! Seller will contact you', Icons.check_circle, isSuccess: true);
+              _showSnackBar('Purchase successful! Seller will contact you',
+                  Icons.check_circle,
+                  isSuccess: true);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: primaryColor,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../controller/auth_controller.dart';
 import '../../model/userModel.dart';
 import '../loginScreen.dart';
+import 'edit_profile.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({Key? key}) : super(key: key);
@@ -32,6 +33,21 @@ class _ProfilePageState extends State<ProfilePage> {
       _currentUser = user;
       _isLoading = false;
     });
+  }
+
+  Future<void> _navigateToEditProfile() async {
+    if (_currentUser == null) return;
+
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditProfilePage(user: _currentUser!),
+      ),
+    );
+
+    if (result == true) {
+      _loadUserData();
+    }
   }
 
   @override
@@ -70,9 +86,7 @@ class _ProfilePageState extends State<ProfilePage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.edit_outlined, color: textDark),
-            onPressed: () {
-              // TODO: Navigate ke Edit Profile
-            },
+            onPressed: _navigateToEditProfile,
           ),
         ],
       ),
@@ -161,14 +175,6 @@ class _ProfilePageState extends State<ProfilePage> {
               color: Colors.white,
               child: Column(
                 children: [
-                  _buildMenuItem(
-                    icon: Icons.person_outline,
-                    title: 'Edit Profile',
-                    subtitle: 'Update your personal information',
-                    onTap: () {
-                      // TODO: Navigate ke Edit Profile
-                    },
-                  ),
                   _buildMenuItem(
                     icon: Icons.location_on_outlined,
                     title: 'Addresses',
