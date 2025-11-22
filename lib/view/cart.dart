@@ -1,6 +1,9 @@
 // lib/views/cart_page.dart
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import '../model/product_model.dart';
+import '../controller/controller_transaksi.dart';
+import '../model/transaksi_model.dart';
 
 class CartPage extends StatefulWidget {
   final Map<String, int> cartItems;
@@ -8,11 +11,11 @@ class CartPage extends StatefulWidget {
   final Function(Map<String, int>) onUpdateCart;
 
   const CartPage({
-    Key? key,
-    required this.cartItems,
-    required this.allProducts,
-    required this.onUpdateCart,
-  }) : super(key: key);
+  super.key,
+  required this.cartItems,
+  required this.allProducts,
+  required this.onUpdateCart,
+});
 
   @override
   State<CartPage> createState() => _CartPageState();
@@ -503,10 +506,51 @@ class _CartPageState extends State<CartPage> {
     );
   }
 
-  void _showCheckoutDialog() {
+ void _showCheckoutDialog() async {
+  final sessionBox = await Hive.openBox('box_session');
+  final idUser = sessionBox.get('id_user');
+  
+  if (idUser == null) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Please login first')),
+    );
+    return;
+  }
+
+  final controller = ControllerTransaksi();
+  final items = localCartItems.entries.map((entry) {
+    final product = widget.allProducts.firstWhere((p) => p.id == entry.key);
+    return ItemTransaksi(
+      idProduk: product.id,
+      namaProduk: product.namaBarang,
+      jumlah: entry.value,
+      harga: product.hargaInt.toDouble(),
+      gambar: product.linkGambar,
+      brand: product.brand,
+    );
+  }).toList();
+
+  final transaksi = TransaksiModel(
+    idTransaksi: DateTime.now().millisecondsSinceEpoch.toString(),
+    idUser: idUser.toString(),
+    tanggalTransaksi: DateTime.now(),
+    items: items,
+    totalHarga: _calculateTotal(),
+    ongkir: 15000,
+    status: 'Pending',
+    metodePembayaran: 'COD',
+    alamatPengiriman: 'Alamat Default',
+  );
+
+  bool berhasil = await controller.simpanTransaksi(transaksi);
+
+  if (!mounted) return;
+
+  if (berhasil) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
@@ -564,7 +608,7 @@ class _CartPageState extends State<CartPage> {
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
             },
             child: const Text('View Order'),
           ),
@@ -574,7 +618,7 @@ class _CartPageState extends State<CartPage> {
                 localCartItems.clear();
               });
               widget.onUpdateCart(localCartItems);
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
               Navigator.pop(context);
             },
             style: ElevatedButton.styleFrom(
@@ -590,5 +634,20 @@ class _CartPageState extends State<CartPage> {
         ],
       ),
     );
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.error_outline, color: Colors.white, size: 20),
+            SizedBox(width: 12),
+            Text('Failed to save transaction'),
+          ],
+        ),
+        backgroundColor: Colors.red,
+      ),
+    );
   }
+}
+
 }

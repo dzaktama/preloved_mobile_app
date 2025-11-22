@@ -40,52 +40,52 @@ class _RegisterPageState extends State<RegisterPage> {
     super.dispose();
   }
 
-  Future<void> _handleRegister() async {
-    if (_formKey.currentState!.validate()) {
-      if (!_acceptTerms) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please accept terms and conditions')),
-        );
-        return;
-      }
+ Future<void> _handleRegister() async {
+  if (!_formKey.currentState!.validate()) return;
 
-      setState(() => _isLoading = true);
-      await Future.delayed(const Duration(milliseconds: 1500));
-
-      final newUser = UserModel(
-        uName: _nameController.text,
-        uEmail: _emailController.text,
-        uPassword: _passwordController.text,
-        uPhone: _phoneController.text,
-        uFotoProfil: '',
-        uRole: 'user',
-      );
-
-      if (!mounted) return;
-
-      bool berhasil = await _authController.register(newUser);
-
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-
-      if (berhasil) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Akun berhasil dibuat! Silakan login'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        Navigator.pop(context);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Email udah dipake orang lain, coba ganti'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
+  if (!_acceptTerms) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Please accept terms and conditions')),
+    );
+    return;
   }
+
+  setState(() => _isLoading = true);
+
+  await Future.delayed(const Duration(milliseconds: 1500));
+
+  final newUser = UserModel(
+    uName: _nameController.text,
+    uEmail: _emailController.text,
+    uPassword: _passwordController.text,
+    uPhone: _phoneController.text,
+    uAddress: '', 
+  );
+
+  if (!mounted) return;
+
+  bool berhasil = await _authController.register(newUser);
+
+  if (!mounted) return;
+  setState(() => _isLoading = false);
+
+  if (berhasil) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Akun berhasil dibuat! Silakan login'),
+        backgroundColor: Colors.green,
+      ),
+    );
+    Navigator.pop(context); 
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Email udah dipake orang lain, coba ganti'),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+}
 
   @override
   Widget build(BuildContext context) {

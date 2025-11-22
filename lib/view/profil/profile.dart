@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import '../../controller/auth_controller.dart';
 import '../../model/userModel.dart';
 import '../loginScreen.dart';
+import '../transaksi/halaman_riwayat.dart';
 import 'edit_profile.dart';
 
 class ProfilePage extends StatefulWidget {
-  const ProfilePage({Key? key}) : super(key: key);
+  const ProfilePage({super.key});
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -107,7 +108,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       border: Border.all(color: primaryColor, width: 3),
                       boxShadow: [
                         BoxShadow(
-                          color: primaryColor.withOpacity(0.2),
+                          color: primaryColor.withValues(alpha: 0.2),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
@@ -140,7 +141,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   
                   Text(
                     _currentUser?.uEmail ?? 'No email',
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 14,
                       color: textLight,
                     ),
@@ -185,7 +186,14 @@ class _ProfilePageState extends State<ProfilePage> {
                     icon: Icons.receipt_long_outlined,
                     title: 'Order History',
                     subtitle: 'View your past orders',
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const HalamanRiwayat(),
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -276,7 +284,7 @@ class _ProfilePageState extends State<ProfilePage> {
               'Version 1.0.0',
               style: TextStyle(
                 fontSize: 12,
-                color: textLight,
+                color: textLight.withValues(alpha: 0.8),
               ),
             ),
             const SizedBox(height: 24),
@@ -288,7 +296,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Widget _buildDefaultAvatar() {
     return Container(
-      color: primaryColor.withOpacity(0.1),
+      color: primaryColor.withValues(alpha: 0.1),
       child: Center(
         child: Text(
           _currentUser?.uName?.substring(0, 1).toUpperCase() ?? 'U',
@@ -316,7 +324,7 @@ class _ProfilePageState extends State<ProfilePage> {
         const SizedBox(height: 4),
         Text(
           label,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 12,
             color: textLight,
           ),
@@ -337,7 +345,7 @@ class _ProfilePageState extends State<ProfilePage> {
         width: 40,
         height: 40,
         decoration: BoxDecoration(
-          color: primaryColor.withOpacity(0.1),
+          color: primaryColor.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Icon(
@@ -356,7 +364,7 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
       subtitle: Text(
         subtitle,
-        style: TextStyle(
+        style: const TextStyle(
           fontSize: 12,
           color: textLight,
         ),

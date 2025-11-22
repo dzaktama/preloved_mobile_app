@@ -7,20 +7,16 @@ environment:
   sdk: '>=3.0.0 <4.0.0'
 
 dependencies:
+  intl: ^0.19.0
   flutter:
     sdk: flutter
-  cupertino_icons: ^1.0.6
-  
-  # --- DATABASE LOKAL (HIVE) ---
   hive: ^2.2.3
   hive_flutter: ^1.1.0
-  
-  # --- LAINNYA ---
-  http: ^1.2.1
-  image_picker: ^1.1.0
+  image_picker: ^1.0.7
   path_provider: ^2.1.2
-  intl: ^0.19.0
-  uuid: ^4.3.3
+  path: ^1.8.3
+  http: ^1.2.0
+  
 
 dev_dependencies:
   flutter_test:

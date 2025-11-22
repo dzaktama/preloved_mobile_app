@@ -6,6 +6,7 @@ class AuthController {
   Future<bool> register(UserModel userBaru) async {
     var box = await Hive.openBox<UserModel>('box_user_preloved');
     
+    // Cek apakah email sudah ada
     bool emailAda = box.values.any((user) => user.uEmail == userBaru.uEmail);
     
     if (emailAda) {
@@ -25,6 +26,7 @@ class AuthController {
         (user) => user.uEmail == email && user.uPassword == password,
       );
       
+      // Simpan sesi login
       var sessionBox = await Hive.openBox('box_session');
       await sessionBox.put('is_login', true);
       await sessionBox.put('id_user', userKetemu.key);
@@ -35,28 +37,32 @@ class AuthController {
     }
   }
 
-  // Ambil Data User yang Login
+  // TAMBAHAN: Ambil data user yang sedang login
   Future<UserModel?> getUserLogin() async {
-    var sessionBox = await Hive.openBox('box_session');
-    var idUser = sessionBox.get('id_user');
-    
-    if (idUser == null) return null;
-    
-    var box = await Hive.openBox<UserModel>('box_user_preloved');
-    return box.get(idUser);
+    try {
+      var sessionBox = await Hive.openBox('box_session');
+      var userId = sessionBox.get('id_user');
+      
+      if (userId == null) return null;
+      
+      var box = await Hive.openBox<UserModel>('box_user_preloved');
+      return box.get(userId);
+    } catch (e) {
+      return null;
+    }
   }
 
-  // Update Profil User
-  Future<bool> updateProfil(UserModel userUpdate) async {
+  // TAMBAHAN: Update data user
+  Future<bool> updateUser(UserModel user) async {
     try {
-      await userUpdate.save();
+      await user.save();
       return true;
     } catch (e) {
       return false;
     }
   }
 
-  // Cek Status Login
+  // Cek Status Login (Untuk Splash Screen)
   Future<bool> cekSesi() async {
     var sessionBox = await Hive.openBox('box_session');
     return sessionBox.get('is_login', defaultValue: false);
