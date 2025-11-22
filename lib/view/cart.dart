@@ -1,9 +1,7 @@
-// lib/views/cart_page.dart
+// lib/view/cart.dart
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import '../model/product_model.dart';
-import '../controller/controller_transaksi.dart';
-import '../model/transaksi_model.dart';
+import 'package:preloved_mobile_app/view/transaksi/halaman_checkout.dart';
 
 class CartPage extends StatefulWidget {
   final Map<String, int> cartItems;
@@ -11,11 +9,11 @@ class CartPage extends StatefulWidget {
   final Function(Map<String, int>) onUpdateCart;
 
   const CartPage({
-  super.key,
-  required this.cartItems,
-  required this.allProducts,
-  required this.onUpdateCart,
-});
+    super.key,
+    required this.cartItems,
+    required this.allProducts,
+    required this.onUpdateCart,
+  });
 
   @override
   State<CartPage> createState() => _CartPageState();
@@ -26,7 +24,7 @@ class _CartPageState extends State<CartPage> {
   static const Color backgroundColor = Color(0xFFFAFAFA);
   static const Color textDark = Color(0xFF2F3640);
   static const Color textLight = Color(0xFF57606F);
-  static const Color borderColor = Color(0xFFDFE4EA); // TAMBAHKAN INI
+  static const Color borderColor = Color(0xFFDFE4EA);
   static const Color successColor = Color(0xFF26A69A);
 
   late Map<String, int> localCartItems;
@@ -89,7 +87,7 @@ class _CartPageState extends State<CartPage> {
           lokasi: '',
           linkGambar: '',
           deskripsi: '',
-          kontakPenjual: '', // TAMBAHKAN INI
+          kontakPenjual: '',
         ),
       );
       
@@ -218,7 +216,7 @@ class _CartPageState extends State<CartPage> {
                           lokasi: '',
                           linkGambar: '',
                           deskripsi: '',
-                          kontakPenjual: '', // TAMBAHKAN INI
+                          kontakPenjual: '',
                         ),
                       );
 
@@ -478,7 +476,24 @@ class _CartPageState extends State<CartPage> {
                           height: 52,
                           child: ElevatedButton(
                             onPressed: () {
-                              _showCheckoutDialog();
+                              // Navigate ke CheckoutPage dengan cart items
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => CheckoutPage(
+                                    cartItems: localCartItems,
+                                    allProducts: widget.allProducts,
+                                  ),
+                                ),
+                              ).then((result) {
+                                // Jika checkout berhasil, clear cart
+                                if (result == true) {
+                                  setState(() {
+                                    localCartItems.clear();
+                                  });
+                                  widget.onUpdateCart(localCartItems);
+                                }
+                              });
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: primaryColor,
@@ -505,149 +520,4 @@ class _CartPageState extends State<CartPage> {
             ),
     );
   }
-
- void _showCheckoutDialog() async {
-  final sessionBox = await Hive.openBox('box_session');
-  final idUser = sessionBox.get('id_user');
-  
-  if (idUser == null) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Please login first')),
-    );
-    return;
-  }
-
-  final controller = ControllerTransaksi();
-  final items = localCartItems.entries.map((entry) {
-    final product = widget.allProducts.firstWhere((p) => p.id == entry.key);
-    return ItemTransaksi(
-      idProduk: product.id,
-      namaProduk: product.namaBarang,
-      jumlah: entry.value,
-      harga: product.hargaInt.toDouble(),
-      gambar: product.linkGambar,
-      brand: product.brand,
-    );
-  }).toList();
-
-  final transaksi = TransaksiModel(
-    idTransaksi: DateTime.now().millisecondsSinceEpoch.toString(),
-    idUser: idUser.toString(),
-    tanggalTransaksi: DateTime.now(),
-    items: items,
-    totalHarga: _calculateTotal(),
-    ongkir: 15000,
-    status: 'Pending',
-    metodePembayaran: 'COD',
-    alamatPengiriman: 'Alamat Default',
-  );
-
-  bool berhasil = await controller.simpanTransaksi(transaksi);
-
-  if (!mounted) return;
-
-  if (berhasil) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: const Row(
-          children: [
-            Icon(Icons.check_circle, color: successColor, size: 28),
-            SizedBox(width: 12),
-            Text(
-              'Order Confirmed',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Your order has been placed successfully!',
-              style: TextStyle(
-                fontSize: 14,
-                color: textLight,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: backgroundColor,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Total Amount:'),
-                      Text(
-                        _formatPrice(_calculateTotal() + 15000),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: primaryColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(dialogContext);
-            },
-            child: const Text('View Order'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              setState(() {
-                localCartItems.clear();
-              });
-              widget.onUpdateCart(localCartItems);
-              Navigator.pop(dialogContext);
-              Navigator.pop(context);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: primaryColor,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              elevation: 0,
-            ),
-            child: const Text('Continue Shopping'),
-          ),
-        ],
-      ),
-    );
-  } else {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Row(
-          children: [
-            Icon(Icons.error_outline, color: Colors.white, size: 20),
-            SizedBox(width: 12),
-            Text('Failed to save transaction'),
-          ],
-        ),
-        backgroundColor: Colors.red,
-      ),
-    );
-  }
-}
-
 }
