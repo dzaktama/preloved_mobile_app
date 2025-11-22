@@ -4,20 +4,27 @@ import 'view/splashScreen.dart';
 import 'model/userModel.dart';
 import 'model/transaksi_model.dart';
 import 'model/cart_model.dart';
+import 'model/address_model.dart';  // TAMBAHKAN INI
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Initialize Hive
   await Hive.initFlutter();
+  
+  // Register ALL adapters SEBELUM open box
   Hive.registerAdapter(UserModelAdapter());
   Hive.registerAdapter(TransaksiModelAdapter());
   Hive.registerAdapter(ItemTransaksiAdapter());
   Hive.registerAdapter(CartModelAdapter());
+  Hive.registerAdapter(AddressModelAdapter());  // TAMBAHKAN INI
 
+  // Open boxes
   await Hive.openBox<UserModel>('box_user_preloved');
   await Hive.openBox('box_session');
   await Hive.openBox<TransaksiModel>('box_transaksi');
   await Hive.openBox<CartModel>('box_cart');
+  await Hive.openBox<AddressModel>('box_address');  // TAMBAHKAN INI
 
   runApp(const MyApp());
 }
@@ -33,6 +40,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFE84118)),
         useMaterial3: true,
+        fontFamily: 'Inter', // Optional: tambahkan font
       ),
       home: const SplashScreen(),
     );

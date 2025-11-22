@@ -210,12 +210,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     const SizedBox(height: 20),
                     
                     TextFormField(
-                      controller: _namaController,
+                      controller: _alamatController,
+                      maxLines: 3,
                       style: const TextStyle(color: textDark),
-                      decoration: _inputDecoration('Full Name', Icons.person_outline),
+                      decoration: _inputDecoration('Address', Icons.location_on_outlined),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'Nama tidak boleh kosong';
+                          return 'Alamat tidak boleh kosong';
                         }
                         return null;
                       },

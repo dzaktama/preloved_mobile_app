@@ -1,6 +1,10 @@
-// lib/view/checkout_page.dart
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import '../../model/product_model.dart';
+import '../../model/transaksi_model.dart';
+import '../../model/userModel.dart';
+import '../../controller/controller_transaksi.dart';
+import '../../controller/auth_controller.dart';
 
 class CheckoutPage extends StatefulWidget {
   final Map<String, int> cartItems;
@@ -18,17 +22,18 @@ class CheckoutPage extends StatefulWidget {
 
 class _CheckoutPageState extends State<CheckoutPage> {
   static const Color primaryColor = Color(0xFFE84118);
-  static const Color secondaryColor = Color(0xFFFF6348);
   static const Color backgroundColor = Color(0xFFFAFAFA);
   static const Color textDark = Color(0xFF2F3640);
   static const Color textLight = Color(0xFF57606F);
   static const Color borderColor = Color(0xFFDFE4EA);
   static const Color successColor = Color(0xFF26A69A);
 
-  final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _phoneController = TextEditingController();
-  final _addressController = TextEditingController();
+  final AuthController _authController = AuthController();
+  final ControllerTransaksi _controllerTransaksi = ControllerTransaksi();
+  
+  UserModel? _currentUser;
+  bool _isLoading = true;
+  
   final _notesController = TextEditingController();
 
   String _selectedPayment = 'COD';
@@ -45,6 +50,20 @@ class _CheckoutPageState extends State<CheckoutPage> {
     {'id': 'Express', 'name': 'Express', 'duration': '1-2 days', 'price': 25000},
     {'id': 'Same Day', 'name': 'Same Day', 'duration': 'Today', 'price': 35000},
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final user = await _authController.getUserLogin();
+    setState(() {
+      _currentUser = user;
+      _isLoading = false;
+    });
+  }
 
   double _calculateSubtotal() {
     double total = 0;
@@ -78,39 +97,101 @@ class _CheckoutPageState extends State<CheckoutPage> {
   }
 
   void _processCheckout() {
-    if (_formKey.currentState!.validate()) {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                'Processing your order...',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: textDark,
-                ),
-              ),
-            ],
-          ),
+    // Validasi alamat
+    if (_currentUser?.uAddress == null || _currentUser!.uAddress!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please add your address in profile first'),
+          backgroundColor: Colors.red,
         ),
       );
-
-      Future.delayed(const Duration(seconds: 2), () {
-        Navigator.pop(context); // Close loading dialog
-        _showSuccessDialog();
-      });
+      return;
     }
+
+    // Validasi nomor HP
+    if (_currentUser?.uPhone == null || _currentUser!.uPhone!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please add your phone number in profile first'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+            ),
+            SizedBox(height: 20),
+            Text(
+              'Processing your order...',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: textDark,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    // Simpan transaksi
+    Future.delayed(const Duration(seconds: 2), () async {
+      await _simpanTransaksi();
+      
+      if (!mounted) return;
+      Navigator.pop(context); // Close loading
+      _showSuccessDialog();
+    });
+  }
+
+  Future<void> _simpanTransaksi() async {
+    // Konversi cart items ke ItemTransaksi
+    List<ItemTransaksi> items = [];
+    for (var entry in widget.cartItems.entries) {
+      final product = widget.allProducts.firstWhere(
+        (p) => p.id == entry.key,
+        orElse: () => widget.allProducts.first,
+      );
+      
+      final priceString = product.harga.replaceAll(RegExp(r'[^0-9]'), '');
+      final price = double.tryParse(priceString) ?? 0;
+      
+      items.add(ItemTransaksi(
+        idProduk: product.id,
+        namaProduk: product.namaBarang,
+        brand: product.brand,
+        harga: price,
+        jumlah: entry.value,
+        gambar: product.linkGambar,
+      ));
+    }
+
+    // Buat transaksi baru
+    final transaksi = TransaksiModel(
+      idTransaksi: 'TRX${DateTime.now().millisecondsSinceEpoch}',
+      idUser: _currentUser?.key.toString() ?? 'guest',
+      items: items,
+      totalHarga: _calculateSubtotal(),
+      ongkir: _getShippingCost(),
+      status: 'Pending',
+      tanggalTransaksi: DateTime.now(),
+      metodePembayaran: _selectedPayment,
+      alamatPengiriman: _currentUser?.uAddress ?? '',
+    );
+
+    await _controllerTransaksi.simpanTransaksi(transaksi);
   }
 
   void _showSuccessDialog() {
@@ -146,7 +227,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
               ),
             ),
             const SizedBox(height: 12),
-            Text(
+            const Text(
               'Your order has been placed successfully.\nWe will contact you soon!',
               textAlign: TextAlign.center,
               style: TextStyle(
@@ -161,8 +242,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
               height: 48,
               child: ElevatedButton(
                 onPressed: () {
-                  Navigator.pop(context); // Close success dialog
-                  Navigator.pop(context); // Go back to home
+                  Navigator.pop(context); // Close dialog
+                  Navigator.pop(context, true); // Return true ke cart page
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: primaryColor,
@@ -189,6 +270,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: backgroundColor,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
@@ -213,7 +301,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                // Order Summary Section
+                // Order Summary
                 _buildSectionCard(
                   title: 'Order Summary',
                   icon: Icons.shopping_bag_outlined,
@@ -230,63 +318,154 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
                 const SizedBox(height: 16),
 
-                // Shipping Information Section
+                // Shipping Address (dari database)
                 _buildSectionCard(
-                  title: 'Shipping Information',
-                  icon: Icons.local_shipping_outlined,
-                  child: Column(
-                    children: [
-                      _buildTextField(
-                        controller: _nameController,
-                        label: 'Full Name',
-                        icon: Icons.person_outline,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter your name';
-                          }
-                          return null;
-                        },
+                  title: 'Shipping Address',
+                  icon: Icons.location_on,
+                  child: _currentUser?.uAddress != null && _currentUser!.uAddress!.isNotEmpty
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.person, size: 18, color: textLight),
+                                const SizedBox(width: 8),
+                                Text(
+                                  _currentUser?.uName ?? 'No name',
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: textDark,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                const Icon(Icons.phone, size: 18, color: textLight),
+                                const SizedBox(width: 8),
+                                Text(
+                                  _currentUser?.uPhone ?? 'No phone',
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: textDark,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(Icons.location_on, size: 18, color: textLight),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    _currentUser!.uAddress!,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      color: textDark,
+                                      height: 1.5,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            TextButton.icon(
+                              onPressed: () {
+                                Navigator.pop(context);
+                                // Navigasi ke edit profile
+                              },
+                              icon: const Icon(Icons.edit, size: 16),
+                              label: const Text('Change Address'),
+                              style: TextButton.styleFrom(
+                                foregroundColor: primaryColor,
+                                padding: EdgeInsets.zero,
+                              ),
+                            ),
+                          ],
+                        )
+                      : Column(
+                          children: [
+                            const Icon(
+                              Icons.location_off,
+                              size: 48,
+                              color: textLight,
+                            ),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'No address found',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: textDark,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Please add your address in profile',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: textLight,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton.icon(
+                              onPressed: () {
+                                Navigator.pop(context);
+                                // Navigasi ke profile
+                              },
+                              icon: const Icon(Icons.add, size: 18),
+                              label: const Text('Add Address'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: primaryColor,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Notes (Optional)
+                _buildSectionCard(
+                  title: 'Order Notes (Optional)',
+                  icon: Icons.note_outlined,
+                  child: TextField(
+                    controller: _notesController,
+                    maxLines: 3,
+                    decoration: InputDecoration(
+                      hintText: 'Add notes for seller...',
+                      hintStyle: TextStyle(color: textLight.withValues(alpha: 0.6)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: borderColor),
                       ),
-                      const SizedBox(height: 16),
-                      _buildTextField(
-                        controller: _phoneController,
-                        label: 'Phone Number',
-                        icon: Icons.phone_outlined,
-                        keyboardType: TextInputType.phone,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter your phone number';
-                          }
-                          return null;
-                        },
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: borderColor),
                       ),
-                      const SizedBox(height: 16),
-                      _buildTextField(
-                        controller: _addressController,
-                        label: 'Delivery Address',
-                        icon: Icons.location_on_outlined,
-                        maxLines: 3,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter your address';
-                          }
-                          return null;
-                        },
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: primaryColor, width: 2),
                       ),
-                      const SizedBox(height: 16),
-                      _buildTextField(
-                        controller: _notesController,
-                        label: 'Notes (Optional)',
-                        icon: Icons.note_outlined,
-                        maxLines: 2,
-                      ),
-                    ],
+                      filled: true,
+                      fillColor: backgroundColor,
+                      contentPadding: const EdgeInsets.all(12),
+                    ),
                   ),
                 ),
 
                 const SizedBox(height: 16),
 
-                // Shipping Method Section
+                // Shipping Method
                 _buildSectionCard(
                   title: 'Shipping Method',
                   icon: Icons.local_shipping,
@@ -299,7 +478,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
                 const SizedBox(height: 16),
 
-                // Payment Method Section
+                // Payment Method
                 _buildSectionCard(
                   title: 'Payment Method',
                   icon: Icons.payment,
@@ -318,21 +497,11 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   icon: Icons.receipt_long,
                   child: Column(
                     children: [
-                      _buildPriceRow(
-                        'Subtotal',
-                        _formatCurrency(_calculateSubtotal()),
-                      ),
+                      _buildPriceRow('Subtotal', _formatCurrency(_calculateSubtotal())),
                       const SizedBox(height: 12),
-                      _buildPriceRow(
-                        'Shipping Cost',
-                        _formatCurrency(_getShippingCost()),
-                      ),
+                      _buildPriceRow('Shipping Cost', _formatCurrency(_getShippingCost())),
                       const Divider(height: 24),
-                      _buildPriceRow(
-                        'Total',
-                        _formatCurrency(_calculateTotal()),
-                        isTotal: true,
-                      ),
+                      _buildPriceRow('Total', _formatCurrency(_calculateTotal()), isTotal: true),
                     ],
                   ),
                 ),
@@ -342,7 +511,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
             ),
           ),
 
-          // Bottom Checkout Button
+          // Bottom Button
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -429,31 +598,28 @@ class _CheckoutPageState extends State<CheckoutPage> {
           ),
         ],
       ),
-      child: Form(
-        key: title == 'Shipping Information' ? _formKey : null,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(icon, color: primaryColor, size: 24),
-                  const SizedBox(width: 12),
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: textDark,
-                    ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: primaryColor, size: 24),
+                const SizedBox(width: 12),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: textDark,
                   ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              child,
-            ],
-          ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            child,
+          ],
         ),
       ),
     );
@@ -520,48 +686,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    int maxLines = 1,
-    TextInputType? keyboardType,
-    String? Function(String?)? validator,
-  }) {
-    return TextFormField(
-      controller: controller,
-      maxLines: maxLines,
-      keyboardType: keyboardType,
-      validator: validator,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon, color: primaryColor, size: 20),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: borderColor),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: borderColor),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: primaryColor, width: 2),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.red),
-        ),
-        filled: true,
-        fillColor: backgroundColor,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 12,
-        ),
       ),
     );
   }
@@ -703,9 +827,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _phoneController.dispose();
-    _addressController.dispose();
     _notesController.dispose();
     super.dispose();
   }

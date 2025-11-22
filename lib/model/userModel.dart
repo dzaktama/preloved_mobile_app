@@ -23,10 +23,13 @@ class UserModel extends HiveObject {
   String? uAddress;
 
   @HiveField(6)
-  String? uFotoProfil; // TAMBAHAN BARU
+  String? uFotoProfil;
 
   @HiveField(7)
-  String? uRole; // TAMBAHAN BARU
+  String? uRole;
+
+  @HiveField(8)
+  List<String>? daftarAlamat;
 
   UserModel({
     this.uId,
@@ -36,7 +39,8 @@ class UserModel extends HiveObject {
     this.uPhone,
     this.uAddress,
     this.uFotoProfil,
-    this.uRole = 'user', // Default role
+    this.uRole = 'user',
+    this.daftarAlamat,
   });
 
   factory UserModel.fromMap(Map<String, dynamic> map) {
@@ -49,6 +53,9 @@ class UserModel extends HiveObject {
       uAddress: map['uAddress'],
       uFotoProfil: map['uFotoProfil'],
       uRole: map['uRole'] ?? 'user',
+      daftarAlamat: map['daftarAlamat'] != null 
+          ? List<String>.from(map['daftarAlamat']) 
+          : [],
     );
   }
 
@@ -62,6 +69,7 @@ class UserModel extends HiveObject {
       'uAddress': uAddress,
       'uFotoProfil': uFotoProfil,
       'uRole': uRole,
+      'daftarAlamat': daftarAlamat,
     };
   }
 }
