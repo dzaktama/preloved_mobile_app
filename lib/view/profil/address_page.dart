@@ -46,7 +46,7 @@ class _AddressPageState extends State<AddressPage> {
     }
   }
 
-  Future<void> _showAddEditDialog({AddressModel? address}) async {
+  Future<void> _showAddEditBottomSheet({AddressModel? address}) async {
     final formKey = GlobalKey<FormState>();
     final namaController = TextEditingController(text: address?.namaLengkap);
     final teleponController = TextEditingController(text: address?.nomorTelepon);
@@ -57,148 +57,273 @@ class _AddressPageState extends State<AddressPage> {
     String selectedLabel = address?.label ?? 'Rumah';
     bool isPrimary = address?.isPrimary ?? false;
 
-    await showDialog(
+    await showModalBottomSheet(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text(
-            address == null ? 'Tambah Alamat' : 'Edit Alamat',
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          content: SingleChildScrollView(
-            child: Form(
-              key: formKey,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: DraggableScrollableSheet(
+          initialChildSize: 0.92,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          builder: (_, controller) => StatefulBuilder(
+            builder: (context, setSheetState) => Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
               child: Column(
-                mainAxisSize: MainAxisSize.min,
                 children: [
-                  TextFormField(
-                    controller: namaController,
-                    decoration: _inputDecoration('Nama Lengkap'),
-                    validator: (v) => v!.isEmpty ? 'Wajib diisi' : null,
+                  // Handle bar
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        Center(
+                          child: Container(
+                            width: 40,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[300],
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              address == null ? 'Tambah Alamat' : 'Edit Alamat',
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: textDark,
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close),
+                              onPressed: () => Navigator.pop(context),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: teleponController,
-                    decoration: _inputDecoration('Nomor Telepon'),
-                    keyboardType: TextInputType.phone,
-                    validator: (v) => v!.isEmpty ? 'Wajib diisi' : null,
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: alamatController,
-                    decoration: _inputDecoration('Alamat Lengkap'),
-                    maxLines: 3,
-                    validator: (v) => v!.isEmpty ? 'Wajib diisi' : null,
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: kotaController,
-                          decoration: _inputDecoration('Kota'),
-                          validator: (v) => v!.isEmpty ? 'Wajib diisi' : null,
+                  
+                  // Form content
+                  Expanded(
+                    child: SingleChildScrollView(
+                      controller: controller,
+                      padding: const EdgeInsets.all(24),
+                      child: Form(
+                        key: formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            TextFormField(
+                              controller: namaController,
+                              decoration: _inputDecoration('Nama Lengkap', Icons.person_outline),
+                              validator: (v) => v!.isEmpty ? 'Wajib diisi' : null,
+                            ),
+                            const SizedBox(height: 16),
+                            
+                            TextFormField(
+                              controller: teleponController,
+                              decoration: _inputDecoration('Nomor Telepon', Icons.phone_outlined),
+                              keyboardType: TextInputType.phone,
+                              validator: (v) => v!.isEmpty ? 'Wajib diisi' : null,
+                            ),
+                            const SizedBox(height: 16),
+                            
+                            TextFormField(
+                              controller: alamatController,
+                              decoration: _inputDecoration('Alamat Lengkap', Icons.location_on_outlined),
+                              maxLines: 3,
+                              validator: (v) => v!.isEmpty ? 'Wajib diisi' : null,
+                            ),
+                            const SizedBox(height: 16),
+                            
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: kotaController,
+                                    decoration: _inputDecoration('Kota', Icons.location_city),
+                                    validator: (v) => v!.isEmpty ? 'Wajib diisi' : null,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: kodePosController,
+                                    decoration: _inputDecoration('Kode Pos', Icons.markunread_mailbox),
+                                    keyboardType: TextInputType.number,
+                                    validator: (v) => v!.isEmpty ? 'Wajib diisi' : null,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            
+                            TextFormField(
+                              controller: provinsiController,
+                              decoration: _inputDecoration('Provinsi', Icons.map_outlined),
+                              validator: (v) => v!.isEmpty ? 'Wajib diisi' : null,
+                            ),
+                            const SizedBox(height: 16),
+                            
+                            const Text(
+                              'Label Alamat',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: textDark,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: ['Rumah', 'Kantor', 'Apartemen', 'Lainnya'].map((label) {
+                                final isSelected = selectedLabel == label;
+                                return ChoiceChip(
+                                  label: Text(label),
+                                  selected: isSelected,
+                                  onSelected: (selected) {
+                                    setSheetState(() {
+                                      selectedLabel = label;
+                                    });
+                                  },
+                                  selectedColor: primaryColor,
+                                  backgroundColor: backgroundColor,
+                                  labelStyle: TextStyle(
+                                    color: isSelected ? Colors.white : textDark,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                            
+                            const SizedBox(height: 16),
+                            
+                            Container(
+                              decoration: BoxDecoration(
+                                color: backgroundColor,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: borderColor),
+                              ),
+                              child: CheckboxListTile(
+                                value: isPrimary,
+                                title: const Text(
+                                  'Jadikan alamat utama',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                subtitle: const Text(
+                                  'Alamat ini akan digunakan sebagai default',
+                                  style: TextStyle(fontSize: 12),
+                                ),
+                                activeColor: primaryColor,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                                onChanged: (value) {
+                                  setSheetState(() {
+                                    isPrimary = value!;
+                                  });
+                                },
+                              ),
+                            ),
+                            
+                            const SizedBox(height: 24),
+                          ],
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: TextFormField(
-                          controller: kodePosController,
-                          decoration: _inputDecoration('Kode Pos'),
-                          keyboardType: TextInputType.number,
-                          validator: (v) => v!.isEmpty ? 'Wajib diisi' : null,
+                    ),
+                  ),
+                  
+                  // Bottom button
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, -2),
+                        ),
+                      ],
+                    ),
+                    child: SafeArea(
+                      child: SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            if (formKey.currentState!.validate()) {
+                              final newAddress = AddressModel(
+                                idAddress: address?.idAddress,
+                                idUser: _userId,
+                                namaLengkap: namaController.text,
+                                nomorTelepon: teleponController.text,
+                                alamatLengkap: alamatController.text,
+                                kota: kotaController.text,
+                                provinsi: provinsiController.text,
+                                kodePos: kodePosController.text,
+                                label: selectedLabel,
+                                isPrimary: isPrimary,
+                              );
+
+                              bool success;
+                              if (address == null) {
+                                success = await _addressController.tambahAlamat(newAddress);
+                              } else {
+                                success = await _addressController.updateAlamat(newAddress);
+                              }
+
+                              if (success && mounted) {
+                                Navigator.pop(context);
+                                _loadAddresses();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(address == null
+                                        ? 'Alamat berhasil ditambahkan'
+                                        : 'Alamat berhasil diperbarui'),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: primaryColor,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: Text(
+                            address == null ? 'Simpan Alamat' : 'Update Alamat',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: provinsiController,
-                    decoration: _inputDecoration('Provinsi'),
-                    validator: (v) => v!.isEmpty ? 'Wajib diisi' : null,
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    value: selectedLabel,
-                    decoration: _inputDecoration('Label Alamat'),
-                    items: ['Rumah', 'Kantor', 'Apartemen', 'Lainnya']
-                        .map((label) => DropdownMenuItem(
-                              value: label,
-                              child: Text(label),
-                            ))
-                        .toList(),
-                    onChanged: (value) {
-                      setDialogState(() {
-                        selectedLabel = value!;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  CheckboxListTile(
-                    value: isPrimary,
-                    title: const Text('Set sebagai alamat utama'),
-                    activeColor: primaryColor,
-                    contentPadding: EdgeInsets.zero,
-                    onChanged: (value) {
-                      setDialogState(() {
-                        isPrimary = value!;
-                      });
-                    },
+                    ),
                   ),
                 ],
               ),
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Batal'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                if (formKey.currentState!.validate()) {
-                  final newAddress = AddressModel(
-                    idAddress: address?.idAddress,
-                    idUser: _userId,
-                    namaLengkap: namaController.text,
-                    nomorTelepon: teleponController.text,
-                    alamatLengkap: alamatController.text,
-                    kota: kotaController.text,
-                    provinsi: provinsiController.text,
-                    kodePos: kodePosController.text,
-                    label: selectedLabel,
-                    isPrimary: isPrimary,
-                  );
-
-                  bool success;
-                  if (address == null) {
-                    success = await _addressController.tambahAlamat(newAddress);
-                  } else {
-                    success = await _addressController.updateAlamat(newAddress);
-                  }
-
-                  if (success && mounted) {
-                    Navigator.pop(context);
-                    _loadAddresses();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(address == null
-                            ? 'Alamat berhasil ditambahkan'
-                            : 'Alamat berhasil diperbarui'),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
-                  }
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryColor,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Simpan'),
-            ),
-          ],
         ),
       ),
     );
@@ -213,7 +338,7 @@ class _AddressPageState extends State<AddressPage> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: textDark),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => Navigator.pop(context, true),
         ),
         title: const Text(
           'Alamat Saya',
@@ -234,7 +359,7 @@ class _AddressPageState extends State<AddressPage> {
                       Icon(
                         Icons.location_off_outlined,
                         size: 80,
-                        color: textLight.withValues(alpha: 0.5),
+                        color: textLight.withOpacity(0.5),
                       ),
                       const SizedBox(height: 16),
                       const Text(
@@ -264,7 +389,7 @@ class _AddressPageState extends State<AddressPage> {
                   },
                 ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddEditDialog(),
+        onPressed: () => _showAddEditBottomSheet(),
         backgroundColor: primaryColor,
         icon: const Icon(Icons.add),
         label: const Text('Tambah Alamat'),
@@ -283,7 +408,7 @@ class _AddressPageState extends State<AddressPage> {
             : null,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.08),
+            color: Colors.grey.withOpacity(0.08),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -303,7 +428,7 @@ class _AddressPageState extends State<AddressPage> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: primaryColor.withValues(alpha: 0.1),
+                        color: primaryColor.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
@@ -321,7 +446,7 @@ class _AddressPageState extends State<AddressPage> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.green.withValues(alpha: 0.1),
+                          color: Colors.green.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: const Text(
@@ -373,7 +498,7 @@ class _AddressPageState extends State<AddressPage> {
                   ],
                   onSelected: (value) async {
                     if (value == 'edit') {
-                      _showAddEditDialog(address: address);
+                      _showAddEditBottomSheet(address: address);
                     } else if (value == 'primary') {
                       await _addressController.setPrimaryAddress(
                           _userId!, address.idAddress!);
@@ -382,6 +507,9 @@ class _AddressPageState extends State<AddressPage> {
                       final confirm = await showDialog<bool>(
                         context: context,
                         builder: (context) => AlertDialog(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
                           title: const Text('Hapus Alamat'),
                           content: const Text(
                               'Yakin ingin menghapus alamat ini?'),
@@ -450,23 +578,34 @@ class _AddressPageState extends State<AddressPage> {
     );
   }
 
-  InputDecoration _inputDecoration(String label) {
+  InputDecoration _inputDecoration(String label, IconData icon) {
     return InputDecoration(
       labelText: label,
+      prefixIcon: Icon(icon, color: textLight, size: 20),
       labelStyle: const TextStyle(color: textLight, fontSize: 14),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: borderColor),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: borderColor),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: primaryColor, width: 2),
       ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Colors.red),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Colors.red, width: 2),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      filled: true,
+      fillColor: backgroundColor,
     );
   }
 }

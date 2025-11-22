@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../model/product_model.dart';
 import '../../model/transaksi_model.dart';
+import '../../model/address_model.dart';
 import '../../model/userModel.dart';
 import '../../controller/controller_transaksi.dart';
+import '../../controller/controller_address.dart';
 import '../../controller/auth_controller.dart';
+import '../profil/address_page.dart';
 
 class CheckoutPage extends StatefulWidget {
   final Map<String, int> cartItems;
@@ -29,9 +32,11 @@ class _CheckoutPageState extends State<CheckoutPage> {
   static const Color successColor = Color(0xFF26A69A);
 
   final AuthController _authController = AuthController();
+  final AddressController _addressController = AddressController();
   final ControllerTransaksi _controllerTransaksi = ControllerTransaksi();
   
   UserModel? _currentUser;
+  AddressModel? _selectedAddress;
   bool _isLoading = true;
   
   final _notesController = TextEditingController();
@@ -58,11 +63,33 @@ class _CheckoutPageState extends State<CheckoutPage> {
   }
 
   Future<void> _loadUserData() async {
+    setState(() => _isLoading = true);
+    
     final user = await _authController.getUserLogin();
-    setState(() {
-      _currentUser = user;
-      _isLoading = false;
-    });
+    if (user != null && user.key != null) {
+      final primaryAddress = await _addressController.ambilPrimaryAddress(user.key.toString());
+      setState(() {
+        _currentUser = user;
+        _selectedAddress = primaryAddress;
+        _isLoading = false;
+      });
+    } else {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _navigateToAddressPage() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const AddressPage(),
+      ),
+    );
+    
+    // Reload address setelah kembali dari address page
+    if (result == true || result == null) {
+      _loadUserData();
+    }
   }
 
   double _calculateSubtotal() {
@@ -98,21 +125,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
   void _processCheckout() {
     // Validasi alamat
-    if (_currentUser?.uAddress == null || _currentUser!.uAddress!.isEmpty) {
+    if (_selectedAddress == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please add your address in profile first'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    // Validasi nomor HP
-    if (_currentUser?.uPhone == null || _currentUser!.uPhone!.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please add your phone number in profile first'),
+          content: Text('Please add your shipping address first'),
           backgroundColor: Colors.red,
         ),
       );
@@ -146,7 +162,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
       ),
     );
 
-    // Simpan transaksi
     Future.delayed(const Duration(seconds: 2), () async {
       await _simpanTransaksi();
       
@@ -157,7 +172,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
   }
 
   Future<void> _simpanTransaksi() async {
-    // Konversi cart items ke ItemTransaksi
     List<ItemTransaksi> items = [];
     for (var entry in widget.cartItems.entries) {
       final product = widget.allProducts.firstWhere(
@@ -178,7 +192,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
       ));
     }
 
-    // Buat transaksi baru
+    final alamatLengkap = '${_selectedAddress!.alamatLengkap}, ${_selectedAddress!.kota}, ${_selectedAddress!.provinsi} ${_selectedAddress!.kodePos}';
+
     final transaksi = TransaksiModel(
       idTransaksi: 'TRX${DateTime.now().millisecondsSinceEpoch}',
       idUser: _currentUser?.key.toString() ?? 'guest',
@@ -188,7 +203,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
       status: 'Pending',
       tanggalTransaksi: DateTime.now(),
       metodePembayaran: _selectedPayment,
-      alamatPengiriman: _currentUser?.uAddress ?? '',
+      alamatPengiriman: alamatLengkap,
     );
 
     await _controllerTransaksi.simpanTransaksi(transaksi);
@@ -242,8 +257,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
               height: 48,
               child: ElevatedButton(
                 onPressed: () {
-                  Navigator.pop(context); // Close dialog
-                  Navigator.pop(context, true); // Return true ke cart page
+                  Navigator.pop(context);
+                  Navigator.pop(context, true);
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: primaryColor,
@@ -318,81 +333,109 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
                 const SizedBox(height: 16),
 
-                // Shipping Address (dari database)
+                // Shipping Address (dari Address Model)
                 _buildSectionCard(
                   title: 'Shipping Address',
                   icon: Icons.location_on,
-                  child: _currentUser?.uAddress != null && _currentUser!.uAddress!.isNotEmpty
+                  child: _selectedAddress != null
                       ? Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
                               children: [
-                                const Icon(Icons.person, size: 18, color: textLight),
-                                const SizedBox(width: 8),
-                                Text(
-                                  _currentUser?.uName ?? 'No name',
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: textDark,
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: primaryColor.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(4),
                                   ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                const Icon(Icons.phone, size: 18, color: textLight),
-                                const SizedBox(width: 8),
-                                Text(
-                                  _currentUser?.uPhone ?? 'No phone',
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    color: textDark,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Icon(Icons.location_on, size: 18, color: textLight),
-                                const SizedBox(width: 8),
-                                Expanded(
                                   child: Text(
-                                    _currentUser!.uAddress!,
+                                    _selectedAddress!.label ?? 'Rumah',
                                     style: const TextStyle(
-                                      fontSize: 14,
-                                      color: textDark,
-                                      height: 1.5,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: primaryColor,
                                     ),
                                   ),
                                 ),
+                                const SizedBox(width: 8),
+                                if (_selectedAddress!.isPrimary == true)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.green.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: const Text(
+                                      'Primary',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.green,
+                                      ),
+                                    ),
+                                  ),
                               ],
                             ),
                             const SizedBox(height: 12),
-                            TextButton.icon(
-                              onPressed: () {
-                                Navigator.pop(context);
-                                // Navigasi ke edit profile
-                              },
-                              icon: const Icon(Icons.edit, size: 16),
-                              label: const Text('Change Address'),
-                              style: TextButton.styleFrom(
-                                foregroundColor: primaryColor,
-                                padding: EdgeInsets.zero,
+                            Text(
+                              _selectedAddress!.namaLengkap ?? '',
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: textDark,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              _selectedAddress!.nomorTelepon ?? '',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: textLight,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              _selectedAddress!.alamatLengkap ?? '',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: textDark,
+                                height: 1.5,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${_selectedAddress!.kota}, ${_selectedAddress!.provinsi} ${_selectedAddress!.kodePos}',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: textLight,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                onPressed: _navigateToAddressPage,
+                                icon: const Icon(Icons.edit_location_alt, size: 18),
+                                label: const Text('Change Address'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: primaryColor,
+                                  side: const BorderSide(color: primaryColor),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                ),
                               ),
                             ),
                           ],
                         )
                       : Column(
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.location_off,
                               size: 48,
-                              color: textLight,
+                              color: textLight.withOpacity(0.5),
                             ),
                             const SizedBox(height: 12),
                             const Text(
@@ -405,7 +448,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                             ),
                             const SizedBox(height: 8),
                             const Text(
-                              'Please add your address in profile',
+                              'Please add your shipping address',
                               style: TextStyle(
                                 fontSize: 12,
                                 color: textLight,
@@ -413,18 +456,19 @@ class _CheckoutPageState extends State<CheckoutPage> {
                               textAlign: TextAlign.center,
                             ),
                             const SizedBox(height: 16),
-                            ElevatedButton.icon(
-                              onPressed: () {
-                                Navigator.pop(context);
-                                // Navigasi ke profile
-                              },
-                              icon: const Icon(Icons.add, size: 18),
-                              label: const Text('Add Address'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: primaryColor,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                onPressed: _navigateToAddressPage,
+                                icon: const Icon(Icons.add, size: 18),
+                                label: const Text('Add Address'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: primaryColor,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
                                 ),
                               ),
                             ),
@@ -443,7 +487,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                     maxLines: 3,
                     decoration: InputDecoration(
                       hintText: 'Add notes for seller...',
-                      hintStyle: TextStyle(color: textLight.withValues(alpha: 0.6)),
+                      hintStyle: TextStyle(color: textLight.withOpacity(0.6)),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: const BorderSide(color: borderColor),
