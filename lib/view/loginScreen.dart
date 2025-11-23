@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import '../controller/auth_controller.dart'; // Pastikan nama file controller sesuai
+import '../controller/auth_controller.dart';
 import 'registerScreen.dart';
-import 'package:preloved_mobile_app/view/halaman_utama.dart';
+
+import 'package:preloved_mobile_app/view/main_navigation.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -53,7 +54,7 @@ class _LoginPageState extends State<LoginPage> {
       if (berhasil) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const HomePage()),
+          MaterialPageRoute(builder: (context) => const MainNavigation()),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -119,7 +120,6 @@ class _LoginPageState extends State<LoginPage> {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 16,
-                    // Perbaikan: withOpacity diganti withValues
                     color: textLight.withValues(alpha: 0.8), 
                   ),
                 ),
@@ -264,7 +264,6 @@ class _LoginPageState extends State<LoginPage> {
 
                 const SizedBox(height: 32),
 
-                // BAGIAN INI YANG SEBELUMNYA HILANG (Social Button)
                 Row(
                   children: [
                     Expanded(child: Divider(color: borderColor)),
@@ -305,7 +304,6 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ],
                 ),
-                // END BAGIAN SOCIAL BUTTON
 
                 const SizedBox(height: 32),
 
@@ -371,7 +369,6 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  // Fungsi ini sekarang dipakai di tombol Google/Facebook di atas
   Widget _buildSocialButton({
     required IconData icon,
     required String label,

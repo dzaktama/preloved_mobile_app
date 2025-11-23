@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import '../controller/auth_controller.dart';
 import 'loginScreen.dart';
-import 'package:preloved_mobile_app/view/halaman_utama.dart';
+import 'package:preloved_mobile_app/view/main_navigation.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -67,7 +67,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     if (isLogin) {
       Navigator.pushReplacement(
         context, 
-        MaterialPageRoute(builder: (context) => const HomePage()),
+        MaterialPageRoute(builder: (context) => const MainNavigation()),
       );
     } else {
       Navigator.pushReplacement(
@@ -134,7 +134,6 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                     'Best deals for best items',
                     style: TextStyle(
                       fontSize: 16,
-                      // FIX: Ganti withOpacity
                       color: textDark.withValues(alpha: 0.6),
                       letterSpacing: 0.5,
                     ),
