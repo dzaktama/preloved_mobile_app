@@ -1,6 +1,6 @@
-// lib/view/cart.dart
 import 'package:flutter/material.dart';
 import '../model/product_model.dart';
+import '../controller/controller_cart.dart';
 import 'package:preloved_mobile_app/view/transaksi/halaman_checkout.dart';
 
 class CartPage extends StatefulWidget {
@@ -24,10 +24,10 @@ class _CartPageState extends State<CartPage> {
   static const Color backgroundColor = Color(0xFFFAFAFA);
   static const Color textDark = Color(0xFF2F3640);
   static const Color textLight = Color(0xFF57606F);
-  static const Color borderColor = Color(0xFFDFE4EA);
   static const Color successColor = Color(0xFF26A69A);
 
   late Map<String, int> localCartItems;
+  final ControllerCart _controllerCart = ControllerCart();
 
   @override
   void initState() {
@@ -35,25 +35,15 @@ class _CartPageState extends State<CartPage> {
     localCartItems = Map.from(widget.cartItems);
   }
 
-  void _updateQuantity(String productId, int change) {
-    setState(() {
-      if (localCartItems.containsKey(productId)) {
-        int newQty = localCartItems[productId]! + change;
-        if (newQty > 0) {
-          localCartItems[productId] = newQty;
-        } else {
-          localCartItems.remove(productId);
-        }
-      }
-    });
-    widget.onUpdateCart(localCartItems);
-  }
-
-  void _removeItem(String productId) {
+  Future<void> _removeItem(String productId) async {
     setState(() {
       localCartItems.remove(productId);
     });
+    await _controllerCart.hapusDariCart(productId);
     widget.onUpdateCart(localCartItems);
+    
+    if (!mounted) return;
+    
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: const Row(
@@ -91,7 +81,6 @@ class _CartPageState extends State<CartPage> {
         ),
       );
       
-      // Extract price number from string (e.g., "Rp 150.000" -> 150000)
       final priceStr = product.harga.replaceAll(RegExp(r'[^\d]'), '');
       final price = double.tryParse(priceStr) ?? 0;
       total += price * entry.value;
@@ -128,10 +117,11 @@ class _CartPageState extends State<CartPage> {
         actions: [
           if (localCartItems.isNotEmpty)
             TextButton.icon(
-              onPressed: () {
+              onPressed: () async {
                 setState(() {
                   localCartItems.clear();
                 });
+                await _controllerCart.kosongkanCart();
                 widget.onUpdateCart(localCartItems);
               },
               icon: const Icon(Icons.delete_outline, size: 20),
@@ -150,7 +140,7 @@ class _CartPageState extends State<CartPage> {
                   Icon(
                     Icons.shopping_cart_outlined,
                     size: 100,
-                    color: textLight.withOpacity(0.5),
+                    color: textLight.withValues(alpha: 0.5),
                   ),
                   const SizedBox(height: 16),
                   const Text(
@@ -162,7 +152,7 @@ class _CartPageState extends State<CartPage> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Text(
+                  const Text(
                     'Add items to get started',
                     style: TextStyle(
                       fontSize: 14,
@@ -202,7 +192,6 @@ class _CartPageState extends State<CartPage> {
                     itemCount: localCartItems.length,
                     itemBuilder: (context, index) {
                       final productId = localCartItems.keys.elementAt(index);
-                      final quantity = localCartItems[productId]!;
                       final product = widget.allProducts.firstWhere(
                         (p) => p.id == productId,
                         orElse: () => ProductModel(
@@ -223,8 +212,8 @@ class _CartPageState extends State<CartPage> {
                       return Dismissible(
                         key: Key(productId),
                         direction: DismissDirection.endToStart,
-                        onDismissed: (direction) {
-                          _removeItem(productId);
+                        onDismissed: (direction) async {
+                          await _removeItem(productId);
                         },
                         background: Container(
                           alignment: Alignment.centerRight,
@@ -248,7 +237,7 @@ class _CartPageState extends State<CartPage> {
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.grey.withOpacity(0.08),
+                                color: Colors.grey.withValues(alpha: 0.08),
                                 blurRadius: 10,
                                 offset: const Offset(0, 2),
                               ),
@@ -256,7 +245,6 @@ class _CartPageState extends State<CartPage> {
                           ),
                           child: Row(
                             children: [
-                              // Product image
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(8),
                                 child: Image.network(
@@ -276,7 +264,6 @@ class _CartPageState extends State<CartPage> {
                               ),
                               const SizedBox(width: 12),
                               
-                              // Product details
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -294,7 +281,7 @@ class _CartPageState extends State<CartPage> {
                                     const SizedBox(height: 4),
                                     Text(
                                       product.brand,
-                                      style: TextStyle(
+                                      style: const TextStyle(
                                         fontSize: 12,
                                         color: textLight,
                                       ),
@@ -312,64 +299,14 @@ class _CartPageState extends State<CartPage> {
                                 ),
                               ),
                               
-                              // Quantity controls
-                              Column(
-                                children: [
-                                  Container(
-                                    decoration: BoxDecoration(
-                                      border: Border.all(color: borderColor),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        InkWell(
-                                          onTap: () => _updateQuantity(productId, -1),
-                                          child: Container(
-                                            width: 32,
-                                            height: 32,
-                                            alignment: Alignment.center,
-                                            child: const Icon(
-                                              Icons.remove,
-                                              size: 16,
-                                              color: textDark,
-                                            ),
-                                          ),
-                                        ),
-                                        Container(
-                                          width: 40,
-                                          height: 32,
-                                          alignment: Alignment.center,
-                                          decoration: BoxDecoration(
-                                            border: Border.symmetric(
-                                              vertical: BorderSide(color: borderColor),
-                                            ),
-                                          ),
-                                          child: Text(
-                                            '$quantity',
-                                            style: const TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w600,
-                                              color: textDark,
-                                            ),
-                                          ),
-                                        ),
-                                        InkWell(
-                                          onTap: () => _updateQuantity(productId, 1),
-                                          child: Container(
-                                            width: 32,
-                                            height: 32,
-                                            alignment: Alignment.center,
-                                            child: const Icon(
-                                              Icons.add,
-                                              size: 16,
-                                              color: textDark,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
+                              IconButton(
+                                onPressed: () async {
+                                  await _removeItem(productId);
+                                },
+                                icon: const Icon(
+                                  Icons.delete_outline,
+                                  color: Colors.red,
+                                ),
                               ),
                             ],
                           ),
@@ -379,14 +316,13 @@ class _CartPageState extends State<CartPage> {
                   ),
                 ),
                 
-                // Bottom checkout section
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
+                        color: Colors.black.withValues(alpha: 0.05),
                         blurRadius: 10,
                         offset: const Offset(0, -2),
                       ),
@@ -395,13 +331,12 @@ class _CartPageState extends State<CartPage> {
                   child: SafeArea(
                     child: Column(
                       children: [
-                        // Total items
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              'Items (${localCartItems.values.reduce((a, b) => a + b)})',
-                              style: TextStyle(
+                              'Items (${localCartItems.length})',
+                              style: const TextStyle(
                                 fontSize: 14,
                                 color: textLight,
                               ),
@@ -418,8 +353,7 @@ class _CartPageState extends State<CartPage> {
                         ),
                         const SizedBox(height: 8),
                         
-                        // Shipping (example)
-                        Row(
+                        const Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
@@ -431,7 +365,7 @@ class _CartPageState extends State<CartPage> {
                             ),
                             Text(
                               'Rp 15.000',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
                                 color: textDark,
@@ -445,7 +379,6 @@ class _CartPageState extends State<CartPage> {
                           child: Divider(height: 1),
                         ),
                         
-                        // Total
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -470,14 +403,12 @@ class _CartPageState extends State<CartPage> {
                         
                         const SizedBox(height: 16),
                         
-                        // Checkout button
                         SizedBox(
                           width: double.infinity,
                           height: 52,
                           child: ElevatedButton(
-                            onPressed: () {
-                              // Navigate ke CheckoutPage dengan cart items
-                              Navigator.push(
+                            onPressed: () async {
+                              final result = await Navigator.push(
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) => CheckoutPage(
@@ -485,15 +416,15 @@ class _CartPageState extends State<CartPage> {
                                     allProducts: widget.allProducts,
                                   ),
                                 ),
-                              ).then((result) {
-                                // Jika checkout berhasil, clear cart
-                                if (result == true) {
-                                  setState(() {
-                                    localCartItems.clear();
-                                  });
-                                  widget.onUpdateCart(localCartItems);
-                                }
-                              });
+                              );
+                              
+                              if (result == true) {
+                                setState(() {
+                                  localCartItems.clear();
+                                });
+                                await _controllerCart.kosongkanCart();
+                                widget.onUpdateCart(localCartItems);
+                              }
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: primaryColor,

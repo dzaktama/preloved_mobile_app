@@ -1,4 +1,3 @@
-// lib/view/halaman_utama.dart
 import 'package:flutter/material.dart';
 import '../controller/home_controller.dart';
 import '../controller/controller_cart.dart';
@@ -6,6 +5,7 @@ import '../model/product_model.dart';
 import 'package:preloved_mobile_app/view/profil/profile.dart';
 import 'package:preloved_mobile_app/view/cart.dart';
 import 'package:preloved_mobile_app/view/like.dart';
+import 'package:preloved_mobile_app/view/transaksi/halaman_checkout.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -938,9 +938,24 @@ class _HomePageState extends State<HomePage> {
                             child: SizedBox(
                               height: 52,
                               child: ElevatedButton.icon(
-                                onPressed: () {
+                                onPressed: () async {
                                   Navigator.pop(context);
-                                  _showBuyNowDialog(product);
+                                  
+                                  Map<String, int> buyNowCart = {product.id: 1};
+                                  
+                                  final result = await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => CheckoutPage(
+                                        cartItems: buyNowCart,
+                                        allProducts: _controller.allProducts,
+                                      ),
+                                    ),
+                                  );
+                                  
+                                  if (result == true) {
+                                    _showSnackBar('Order placed successfully!', Icons.check_circle, isSuccess: true);
+                                  }
                                 },
                                 icon: const Icon(Icons.shopping_bag, size: 20),
                                 label: const Text(
@@ -969,133 +984,6 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  void _showBuyNowDialog(ProductModel product) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: Row(
-          children: [
-            const Icon(Icons.check_circle, color: successColor, size: 28),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Text(
-                'Purchase Confirmed',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'You are about to purchase:',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: textLight,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: backgroundColor,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.network(
-                        product.linkGambar,
-                        width: 60,
-                        height: 60,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            width: 60,
-                            height: 60,
-                            color: Colors.grey[300],
-                            child: const Icon(Icons.image),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            product.namaBarang,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: textDark,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            product.harga,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: primaryColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'The seller will be notified and contact you shortly.',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: textLight,
-                  height: 1.4,
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: TextStyle(color: textLight)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _showSnackBar('Purchase successful! Seller will contact you', Icons.check_circle, isSuccess: true);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: primaryColor,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              elevation: 0,
-            ),
-            child: const Text('Confirm'),
-          ),
-        ],
       ),
     );
   }
