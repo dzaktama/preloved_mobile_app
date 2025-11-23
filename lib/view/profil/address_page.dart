@@ -13,7 +13,7 @@ class AddressPage extends StatefulWidget {
 class _AddressPageState extends State<AddressPage> {
   final AddressController _addressController = AddressController();
   final AuthController _authController = AuthController();
-  
+
   List<AddressModel> _daftarAlamat = [];
   bool _isLoading = true;
   String? _userId;
@@ -32,7 +32,7 @@ class _AddressPageState extends State<AddressPage> {
 
   Future<void> _loadAddresses() async {
     setState(() => _isLoading = true);
-    
+
     final user = await _authController.getUserLogin();
     if (user != null && user.key != null) {
       _userId = user.key.toString();
@@ -49,8 +49,10 @@ class _AddressPageState extends State<AddressPage> {
   Future<void> _showAddEditBottomSheet({AddressModel? address}) async {
     final formKey = GlobalKey<FormState>();
     final namaController = TextEditingController(text: address?.namaLengkap);
-    final teleponController = TextEditingController(text: address?.nomorTelepon);
-    final alamatController = TextEditingController(text: address?.alamatLengkap);
+    final teleponController =
+        TextEditingController(text: address?.nomorTelepon);
+    final alamatController =
+        TextEditingController(text: address?.alamatLengkap);
     final kotaController = TextEditingController(text: address?.kota);
     final provinsiController = TextEditingController(text: address?.provinsi);
     final kodePosController = TextEditingController(text: address?.kodePos);
@@ -113,7 +115,7 @@ class _AddressPageState extends State<AddressPage> {
                       ],
                     ),
                   ),
-                  
+
                   // Form content
                   Expanded(
                     child: SingleChildScrollView(
@@ -126,56 +128,63 @@ class _AddressPageState extends State<AddressPage> {
                           children: [
                             TextFormField(
                               controller: namaController,
-                              decoration: _inputDecoration('Nama Lengkap', Icons.person_outline),
-                              validator: (v) => v!.isEmpty ? 'Wajib diisi' : null,
+                              decoration: _inputDecoration(
+                                  'Nama Lengkap', Icons.person_outline),
+                              validator: (v) =>
+                                  v!.isEmpty ? 'Wajib diisi' : null,
                             ),
                             const SizedBox(height: 16),
-                            
                             TextFormField(
                               controller: teleponController,
-                              decoration: _inputDecoration('Nomor Telepon', Icons.phone_outlined),
+                              decoration: _inputDecoration(
+                                  'Nomor Telepon', Icons.phone_outlined),
                               keyboardType: TextInputType.phone,
-                              validator: (v) => v!.isEmpty ? 'Wajib diisi' : null,
+                              validator: (v) =>
+                                  v!.isEmpty ? 'Wajib diisi' : null,
                             ),
                             const SizedBox(height: 16),
-                            
                             TextFormField(
                               controller: alamatController,
-                              decoration: _inputDecoration('Alamat Lengkap', Icons.location_on_outlined),
+                              decoration: _inputDecoration(
+                                  'Alamat Lengkap', Icons.location_on_outlined),
                               maxLines: 3,
-                              validator: (v) => v!.isEmpty ? 'Wajib diisi' : null,
+                              validator: (v) =>
+                                  v!.isEmpty ? 'Wajib diisi' : null,
                             ),
                             const SizedBox(height: 16),
-                            
                             Row(
                               children: [
                                 Expanded(
                                   child: TextFormField(
                                     controller: kotaController,
-                                    decoration: _inputDecoration('Kota', Icons.location_city),
-                                    validator: (v) => v!.isEmpty ? 'Wajib diisi' : null,
+                                    decoration: _inputDecoration(
+                                        'Kota', Icons.location_city),
+                                    validator: (v) =>
+                                        v!.isEmpty ? 'Wajib diisi' : null,
                                   ),
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: TextFormField(
                                     controller: kodePosController,
-                                    decoration: _inputDecoration('Kode Pos', Icons.markunread_mailbox),
+                                    decoration: _inputDecoration(
+                                        'Kode Pos', Icons.markunread_mailbox),
                                     keyboardType: TextInputType.number,
-                                    validator: (v) => v!.isEmpty ? 'Wajib diisi' : null,
+                                    validator: (v) =>
+                                        v!.isEmpty ? 'Wajib diisi' : null,
                                   ),
                                 ),
                               ],
                             ),
                             const SizedBox(height: 16),
-                            
                             TextFormField(
                               controller: provinsiController,
-                              decoration: _inputDecoration('Provinsi', Icons.map_outlined),
-                              validator: (v) => v!.isEmpty ? 'Wajib diisi' : null,
+                              decoration: _inputDecoration(
+                                  'Provinsi', Icons.map_outlined),
+                              validator: (v) =>
+                                  v!.isEmpty ? 'Wajib diisi' : null,
                             ),
                             const SizedBox(height: 16),
-                            
                             const Text(
                               'Label Alamat',
                               style: TextStyle(
@@ -185,11 +194,15 @@ class _AddressPageState extends State<AddressPage> {
                               ),
                             ),
                             const SizedBox(height: 12),
-                            
                             Wrap(
                               spacing: 8,
                               runSpacing: 8,
-                              children: ['Rumah', 'Kantor', 'Apartemen', 'Lainnya'].map((label) {
+                              children: [
+                                'Rumah',
+                                'Kantor',
+                                'Apartemen',
+                                'Lainnya'
+                              ].map((label) {
                                 final isSelected = selectedLabel == label;
                                 return ChoiceChip(
                                   label: Text(label),
@@ -208,9 +221,7 @@ class _AddressPageState extends State<AddressPage> {
                                 );
                               }).toList(),
                             ),
-                            
                             const SizedBox(height: 16),
-                            
                             Container(
                               decoration: BoxDecoration(
                                 color: backgroundColor,
@@ -231,7 +242,8 @@ class _AddressPageState extends State<AddressPage> {
                                   style: TextStyle(fontSize: 12),
                                 ),
                                 activeColor: primaryColor,
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                                contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 4),
                                 onChanged: (value) {
                                   setSheetState(() {
                                     isPrimary = value!;
@@ -239,14 +251,13 @@ class _AddressPageState extends State<AddressPage> {
                                 },
                               ),
                             ),
-                            
                             const SizedBox(height: 24),
                           ],
                         ),
                       ),
                     ),
                   ),
-                  
+
                   // Bottom button
                   Container(
                     padding: const EdgeInsets.all(16),
@@ -282,9 +293,11 @@ class _AddressPageState extends State<AddressPage> {
 
                               bool success;
                               if (address == null) {
-                                success = await _addressController.tambahAlamat(newAddress);
+                                success = await _addressController
+                                    .tambahAlamat(newAddress);
                               } else {
-                                success = await _addressController.updateAlamat(newAddress);
+                                success = await _addressController
+                                    .updateAlamat(newAddress);
                               }
 
                               if (success && mounted) {
@@ -511,8 +524,8 @@ class _AddressPageState extends State<AddressPage> {
                             borderRadius: BorderRadius.circular(16),
                           ),
                           title: const Text('Hapus Alamat'),
-                          content: const Text(
-                              'Yakin ingin menghapus alamat ini?'),
+                          content:
+                              const Text('Yakin ingin menghapus alamat ini?'),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.pop(context, false),
@@ -528,7 +541,7 @@ class _AddressPageState extends State<AddressPage> {
                           ],
                         ),
                       );
-                      
+
                       if (confirm == true) {
                         await _addressController.hapusAlamat(address);
                         _loadAddresses();
