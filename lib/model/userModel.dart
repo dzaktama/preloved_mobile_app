@@ -8,6 +8,13 @@ class UserModel {
   String? uFotoProfil;
   String? uRole;
   String? createdAt;
+  
+  // NEW FIELDS
+  double? rating;
+  int? totalReviews;
+  double? responseRate;
+  String? bio;
+  String? joinDate;
 
   UserModel({
     this.id,
@@ -19,6 +26,11 @@ class UserModel {
     this.uFotoProfil,
     this.uRole = 'user',
     this.createdAt,
+    this.rating = 0.0,
+    this.totalReviews = 0,
+    this.responseRate = 100.0,
+    this.bio,
+    this.joinDate,
   });
 
   // Convert to Map for database
@@ -33,6 +45,11 @@ class UserModel {
       'foto_profil': uFotoProfil,
       'role': uRole,
       'created_at': createdAt ?? DateTime.now().toIso8601String(),
+      'rating': rating,
+      'total_reviews': totalReviews,
+      'response_rate': responseRate,
+      'bio': bio,
+      'join_date': joinDate ?? DateTime.now().toIso8601String(),
     };
   }
 
@@ -48,6 +65,11 @@ class UserModel {
       uFotoProfil: map['foto_profil'] as String?,
       uRole: map['role'] as String? ?? 'user',
       createdAt: map['created_at'] as String?,
+      rating: map['rating'] as double? ?? 0.0,
+      totalReviews: map['total_reviews'] as int? ?? 0,
+      responseRate: map['response_rate'] as double? ?? 100.0,
+      bio: map['bio'] as String?,
+      joinDate: map['join_date'] as String?,
     );
   }
 
@@ -61,6 +83,11 @@ class UserModel {
     String? uFotoProfil,
     String? uRole,
     String? createdAt,
+    double? rating,
+    int? totalReviews,
+    double? responseRate,
+    String? bio,
+    String? joinDate,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -72,6 +99,16 @@ class UserModel {
       uFotoProfil: uFotoProfil ?? this.uFotoProfil,
       uRole: uRole ?? this.uRole,
       createdAt: createdAt ?? this.createdAt,
+      rating: rating ?? this.rating,
+      totalReviews: totalReviews ?? this.totalReviews,
+      responseRate: responseRate ?? this.responseRate,
+      bio: bio ?? this.bio,
+      joinDate: joinDate ?? this.joinDate,
     );
   }
+
+  // Helper getter for display
+  String get ratingDisplay => rating?.toStringAsFixed(1) ?? '0.0';
+  String get totalReviewsDisplay => totalReviews?.toString() ?? '0';
+  String get responseRateDisplay => '${responseRate?.toStringAsFixed(0) ?? '100'}%';
 }
