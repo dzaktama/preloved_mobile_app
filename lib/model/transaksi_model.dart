@@ -2,7 +2,7 @@ class TransaksiModel {
   int? id;
   String? idTransaksi;
   int? userId;
-  String? tanggalTransaksi;
+  String? tanggalTransaksi;  // String in database
   double? totalHarga;
   double? ongkir;
   String? status;
@@ -24,6 +24,16 @@ class TransaksiModel {
   });
 
   double get grandTotal => (totalHarga ?? 0) + (ongkir ?? 0);
+  
+  // Helper to get DateTime from String
+  DateTime? get tanggalDateTime {
+    if (tanggalTransaksi == null) return null;
+    try {
+      return DateTime.parse(tanggalTransaksi!);
+    } catch (e) {
+      return null;
+    }
+  }
 
   Map<String, dynamic> toMap() {
     return {

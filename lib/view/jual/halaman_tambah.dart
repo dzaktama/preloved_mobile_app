@@ -1,12 +1,11 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../controller/controller_barang.dart';
-import '../../controller/helper_gambar.dart';
 import '../../model/barang_model.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import '../../controller/auth_controller.dart';
 
 class HalamanTambahBarang extends StatefulWidget {
-  const HalamanTambahBarang({Key? key}) : super(key: key);
+  const HalamanTambahBarang({super.key});
 
   @override
   State<HalamanTambahBarang> createState() => _HalamanTambahBarangState();
@@ -15,6 +14,7 @@ class HalamanTambahBarang extends StatefulWidget {
 class _HalamanTambahBarangState extends State<HalamanTambahBarang> {
   final _formKey = GlobalKey<FormState>();
   final ControllerBarang _controller = ControllerBarang();
+  final AuthController _authController = AuthController();
 
   final _namaController = TextEditingController();
   final _hargaController = TextEditingController();
@@ -54,67 +54,67 @@ class _HalamanTambahBarangState extends State<HalamanTambahBarang> {
   }
 
   Future<void> _pilihSumberGambar() async {
-  showModalBottomSheet(
-    context: context,
-    backgroundColor: Colors.white,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
-    builder: (context) => SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Pilih Sumber Foto',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: textDark,
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Pilih Sumber Foto',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: textDark,
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
-            ListTile(
-              leading: const Icon(Icons.camera_alt, color: primaryColor),
-              title: const Text('Kamera'),
-              onTap: () async {
-                Navigator.pop(context);
-                try {
-                  final path = await _controller.ambilFotoDariKamera();
-                  if (path != null) {
-                    setState(() => _pathGambar = path);
+              const SizedBox(height: 20),
+              ListTile(
+                leading: const Icon(Icons.camera_alt, color: primaryColor),
+                title: const Text('Kamera'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  try {
+                    final path = await _controller.ambilFotoDariKamera();
+                    if (path != null) {
+                      setState(() => _pathGambar = path);
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      _tampilkanSnackBar('Gagal mengambil foto dari kamera');
+                    }
                   }
-                } catch (e) {
-                  if (mounted) {
-                    _tampilkanSnackBar('Gagal mengambil foto dari kamera');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library, color: primaryColor),
+                title: const Text('Galeri'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  try {
+                    final path = await _controller.ambilFotoDariGaleri();
+                    if (path != null) {
+                      setState(() => _pathGambar = path);
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      _tampilkanSnackBar('Gagal mengambil foto dari galeri');
+                    }
                   }
-                }
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library, color: primaryColor),
-              title: const Text('Galeri'),
-              onTap: () async {
-                Navigator.pop(context);
-                try {
-                  final path = await _controller.ambilFotoDariGaleri();
-                  if (path != null) {
-                    setState(() => _pathGambar = path);
-                  }
-                } catch (e) {
-                  if (mounted) {
-                    _tampilkanSnackBar('Gagal mengambil foto dari galeri');
-                  }
-                }
-              },
-            ),
-          ],
+                },
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Future<void> _simpanBarang() async {
     if (!_formKey.currentState!.validate()) return;
@@ -127,8 +127,8 @@ class _HalamanTambahBarangState extends State<HalamanTambahBarang> {
     setState(() => _isLoading = true);
 
     // Ambil ID user yang sedang login
-    var sessionBox = await Hive.openBox('box_session');
-    String idUser = sessionBox.get('id_user', defaultValue: 'unknown').toString();
+    final user = await _authController.getUserLogin();
+    int idUser = user?.id ?? 0;
 
     final barangBaru = BarangJualanModel(
       namaBarang: _namaController.text,
@@ -143,11 +143,13 @@ class _HalamanTambahBarangState extends State<HalamanTambahBarang> {
       kontakPenjual: _kontakController.text,
       pathGambar: _pathGambar!,
       idPenjual: idUser,
-      tanggalUpload: DateTime.now(),
+      tanggalUpload: DateTime.now().toIso8601String(),
     );
 
     final berhasil = await _controller.tambahBarang(barangBaru);
 
+    if (!mounted) return;
+    
     setState(() => _isLoading = false);
 
     if (berhasil) {

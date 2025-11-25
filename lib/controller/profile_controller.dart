@@ -1,195 +1,160 @@
-import '../model/transaksi_model.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
+import '../model/userModel.dart';
 import '../services/database_helper.dart';
+import '../controller/auth_controller.dart';
+import '../controller/controller_barang.dart';
+import '../controller/controller_address.dart';
+import '../controller/controller_transaksi.dart';
 
-class ControllerTransaksi {
+class ProfileController {
+  final ImagePicker _picker = ImagePicker();
   final dbHelper = DatabaseHelper.instance;
+  final authController = AuthController();
 
-  Future<bool> simpanTransaksi(TransaksiModel transaksi) async {
+  // Ambil foto dari kamera
+  Future<String?> ambilFotoDariKamera() async {
     try {
-      final db = await dbHelper.database;
+      final XFile? foto = await _picker.pickImage(
+        source: ImageSource.camera,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 85,
+      );
 
-      // Insert transaksi utama
-      final transaksiId = await db.insert('transaksi', transaksi.toMap());
-
-      // Insert items transaksi
-      if (transaksi.items != null) {
-        for (var item in transaksi.items!) {
-          item.transaksiId = transaksiId;
-          await db.insert('item_transaksi', item.toMap());
-        }
+      if (foto != null) {
+        return await _simpanFotoLokal(foto);
       }
-
-      return true;
+      return null;
     } catch (e) {
-      print('Error simpanTransaksi: $e');
-      return false;
-    }
-  }
-
-  Future<List<TransaksiModel>> ambilSemuaTransaksi() async {
-    try {
-      final db = await dbHelper.database;
-
-      final List<Map<String, dynamic>> transaksiMaps = await db.query(
-        'transaksi',
-        orderBy: 'tanggal_transaksi DESC',
-      );
-
-      List<TransaksiModel> transaksiList = [];
-
-      for (var transaksiMap in transaksiMaps) {
-        final transaksi = TransaksiModel.fromMap(transaksiMap);
-
-        // Ambil items untuk transaksi ini
-        final List<Map<String, dynamic>> itemMaps = await db.query(
-          'item_transaksi',
-          where: 'transaksi_id = ?',
-          whereArgs: [transaksi.id],
-        );
-
-        transaksi.items = List.generate(
-          itemMaps.length,
-          (i) => ItemTransaksi.fromMap(itemMaps[i]),
-        );
-
-        transaksiList.add(transaksi);
-      }
-
-      return transaksiList;
-    } catch (e) {
-      print('Error ambilSemuaTransaksi: $e');
-      return [];
-    }
-  }
-
-  Future<List<TransaksiModel>> ambilTransaksiByUser(int userId) async {
-    try {
-      final db = await dbHelper.database;
-
-      final List<Map<String, dynamic>> transaksiMaps = await db.query(
-        'transaksi',
-        where: 'user_id = ?',
-        whereArgs: [userId],
-        orderBy: 'tanggal_transaksi DESC',
-      );
-
-      List<TransaksiModel> transaksiList = [];
-
-      for (var transaksiMap in transaksiMaps) {
-        final transaksi = TransaksiModel.fromMap(transaksiMap);
-
-        // Ambil items untuk transaksi ini
-        final List<Map<String, dynamic>> itemMaps = await db.query(
-          'item_transaksi',
-          where: 'transaksi_id = ?',
-          whereArgs: [transaksi.id],
-        );
-
-        transaksi.items = List.generate(
-          itemMaps.length,
-          (i) => ItemTransaksi.fromMap(itemMaps[i]),
-        );
-
-        transaksiList.add(transaksi);
-      }
-
-      return transaksiList;
-    } catch (e) {
-      print('Error ambilTransaksiByUser: $e');
-      return [];
-    }
-  }
-
-  Future<TransaksiModel?> ambilTransaksiById(String idTransaksi) async {
-    try {
-      final db = await dbHelper.database;
-
-      final List<Map<String, dynamic>> transaksiMaps = await db.query(
-        'transaksi',
-        where: 'id_transaksi = ?',
-        whereArgs: [idTransaksi],
-        limit: 1,
-      );
-
-      if (transaksiMaps.isEmpty) {
-        return null;
-      }
-
-      final transaksi = TransaksiModel.fromMap(transaksiMaps.first);
-
-      // Ambil items untuk transaksi ini
-      final List<Map<String, dynamic>> itemMaps = await db.query(
-        'item_transaksi',
-        where: 'transaksi_id = ?',
-        whereArgs: [transaksi.id],
-      );
-
-      transaksi.items = List.generate(
-        itemMaps.length,
-        (i) => ItemTransaksi.fromMap(itemMaps[i]),
-      );
-
-      return transaksi;
-    } catch (e) {
-      print('Error ambilTransaksiById: $e');
+      print('Error ambilFotoDariKamera: $e');
       return null;
     }
   }
 
-  Future<bool> updateStatusTransaksi(String idTransaksi, String statusBaru) async {
+  // Ambil foto dari galeri
+  Future<String?> ambilFotoDariGaleri() async {
     try {
-      final db = await dbHelper.database;
-
-      await db.update(
-        'transaksi',
-        {'status': statusBaru},
-        where: 'id_transaksi = ?',
-        whereArgs: [idTransaksi],
+      final XFile? foto = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 85,
       );
 
-      return true;
+      if (foto != null) {
+        return await _simpanFotoLokal(foto);
+      }
+      return null;
     } catch (e) {
-      print('Error updateStatusTransaksi: $e');
+      print('Error ambilFotoDariGaleri: $e');
+      return null;
+    }
+  }
+
+  // Simpan foto ke storage lokal
+  Future<String> _simpanFotoLokal(XFile foto) async {
+    final Directory appDir = await getApplicationDocumentsDirectory();
+    final String fileName =
+        '${DateTime.now().millisecondsSinceEpoch}${path.extension(foto.path)}';
+    final String pathBaru = path.join(appDir.path, 'foto_profil', fileName);
+
+    // Buat folder jika belum ada
+    final Directory folderFoto = Directory(path.dirname(pathBaru));
+    if (!await folderFoto.exists()) {
+      await folderFoto.create(recursive: true);
+    }
+
+    // Copy file ke storage app
+    final File fileBaru = await File(foto.path).copy(pathBaru);
+    return fileBaru.path;
+  }
+
+  // Update profil user
+  Future<bool> updateProfil({
+    required UserModel user,
+    String? namaBaru,
+    String? emailBaru,
+    String? nomorHpBaru,
+    String? alamatBaru,
+    String? fotoProfilBaru,
+  }) async {
+    try {
+      final updatedUser = user.copy(
+        uName: namaBaru ?? user.uName,
+        uEmail: emailBaru ?? user.uEmail,
+        uPhone: nomorHpBaru ?? user.uPhone,
+        uAddress: alamatBaru ?? user.uAddress,
+        uFotoProfil: fotoProfilBaru ?? user.uFotoProfil,
+      );
+
+      return await authController.updateUser(updatedUser);
+    } catch (e) {
+      print('Error updateProfil: $e');
       return false;
     }
   }
 
-  Future<bool> hapusTransaksi(String idTransaksi) async {
+  // Cek apakah email tersedia
+  Future<bool> cekEmailTersedia(String emailBaru, String emailLama) async {
+    if (emailBaru == emailLama) return true;
+
     try {
       final db = await dbHelper.database;
-
-      // Ambil transaksi untuk mendapat ID internal
-      final List<Map<String, dynamic>> transaksiMaps = await db.query(
-        'transaksi',
-        where: 'id_transaksi = ?',
-        whereArgs: [idTransaksi],
-        limit: 1,
+      final List<Map<String, dynamic>> result = await db.query(
+        'users',
+        where: 'email = ?',
+        whereArgs: [emailBaru],
       );
 
-      if (transaksiMaps.isEmpty) {
+      return result.isEmpty;
+    } catch (e) {
+      print('Error cekEmailTersedia: $e');
+      return false;
+    }
+  }
+
+  // Ganti password
+  Future<bool> gantiPassword({
+    required UserModel user,
+    required String passwordLama,
+    required String passwordBaru,
+  }) async {
+    try {
+      // Verifikasi password lama
+      if (user.uPassword != passwordLama) {
         return false;
       }
 
-      final transaksiId = transaksiMaps.first['id'] as int;
-
-      // Hapus items transaksi dulu (karena foreign key)
-      await db.delete(
-        'item_transaksi',
-        where: 'transaksi_id = ?',
-        whereArgs: [transaksiId],
-      );
-
-      // Hapus transaksi
-      await db.delete(
-        'transaksi',
-        where: 'id = ?',
-        whereArgs: [transaksiId],
-      );
-
-      return true;
+      final updatedUser = user.copy(uPassword: passwordBaru);
+      return await authController.updateUser(updatedUser);
     } catch (e) {
-      print('Error hapusTransaksi: $e');
+      print('Error gantiPassword: $e');
       return false;
+    }
+  }
+
+  // Get statistics untuk profile page
+  Future<Map<String, int>> getStatistics(int userId) async {
+    try {
+      final controllerBarang = ControllerBarang();
+      final addressController = AddressController();
+      final transaksiController = ControllerTransaksi();
+
+      final barang = await controllerBarang.ambilBarangUser(userId);
+      final addresses = await addressController.ambilAlamatUser(userId);
+      final transaksi = await transaksiController.ambilTransaksiByUser(userId);
+
+      return {
+        'items': barang.length,
+        'addresses': addresses.length,
+        'orders': transaksi.length,
+      };
+    } catch (e) {
+      print('Error getStatistics: $e');
+      return {'items': 0, 'addresses': 0, 'orders': 0};
     }
   }
 }

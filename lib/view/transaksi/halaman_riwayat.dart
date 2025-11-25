@@ -35,8 +35,8 @@ class _HalamanRiwayatState extends State<HalamanRiwayat> {
     setState(() => _isLoading = true);
     
     final user = await _authController.getUserLogin();
-    if (user != null && user.key != null) {
-      final transaksi = await _controllerTransaksi.ambilTransaksiByUser(user.key.toString());
+    if (user != null && user.id != null) {
+      final transaksi = await _controllerTransaksi.ambilTransaksiByUser(user.id!);
       setState(() {
         _daftarTransaksi = transaksi;
         _isLoading = false;

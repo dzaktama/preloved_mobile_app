@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import '../../model/product_model.dart';
 import '../../model/transaksi_model.dart';
 import '../../model/address_model.dart';
@@ -65,9 +64,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
   Future<void> _loadUserData() async {
     setState(() => _isLoading = true);
     
-    final user = await _authController.getUserLogin();
-    if (user != null && user.key != null) {
-      final primaryAddress = await _addressController.ambilPrimaryAddress(user.key.toString());
+  final user = await _authController.getUserLogin();
+    if (user != null && user.id != null) {
+    final primaryAddress = await _addressController.ambilPrimaryAddress(user.id!);
       setState(() {
         _currentUser = user;
         _selectedAddress = primaryAddress;
@@ -196,16 +195,15 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
     final transaksi = TransaksiModel(
       idTransaksi: 'TRX${DateTime.now().millisecondsSinceEpoch}',
-      idUser: _currentUser?.key.toString() ?? 'guest',
+      userId: _currentUser?.id ?? 0,
       items: items,
       totalHarga: _calculateSubtotal(),
       ongkir: _getShippingCost(),
       status: 'Pending',
-      tanggalTransaksi: DateTime.now(),
+      tanggalTransaksi: DateTime.now().toIso8601String(),
       metodePembayaran: _selectedPayment,
       alamatPengiriman: alamatLengkap,
     );
-
     await _controllerTransaksi.simpanTransaksi(transaksi);
   }
 

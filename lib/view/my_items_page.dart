@@ -35,9 +35,9 @@ class _MyItemsPageState extends State<MyItemsPage> {
     setState(() => _isLoading = true);
 
     final user = await _authController.getUserLogin();
-    if (user != null && user.key != null) {
-      _userId = user.key.toString();
-      final items = await _controllerBarang.ambilBarangUser(_userId!);
+    if (user != null && user.id != null) {
+      _userId = user.id.toString();
+      final items = await _controllerBarang.ambilBarangUser(user.id!);
       setState(() {
         _daftarBarang = items;
         _isLoading = false;

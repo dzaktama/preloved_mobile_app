@@ -4,7 +4,7 @@ import '../../controller/auth_controller.dart';
 import '../../model/address_model.dart';
 
 class AddressPage extends StatefulWidget {
-  const AddressPage({Key? key}) : super(key: key);
+  const AddressPage({super.key});
 
   @override
   State<AddressPage> createState() => _AddressPageState();
@@ -16,7 +16,7 @@ class _AddressPageState extends State<AddressPage> {
 
   List<AddressModel> _daftarAlamat = [];
   bool _isLoading = true;
-  String? _userId;
+  int? _userId;
 
   static const Color primaryColor = Color(0xFFE84118);
   static const Color backgroundColor = Color(0xFFFAFAFA);
@@ -34,9 +34,9 @@ class _AddressPageState extends State<AddressPage> {
     setState(() => _isLoading = true);
 
     final user = await _authController.getUserLogin();
-    if (user != null && user.key != null) {
-      _userId = user.key.toString();
-      final addresses = await _addressController.ambilAlamatUser(_userId!);
+    if (user != null && user.id != null) {
+      _userId = user.id;
+      final addresses = await _addressController.ambilAlamatUser(user.id!);
       setState(() {
         _daftarAlamat = addresses;
         _isLoading = false;
@@ -265,7 +265,7 @@ class _AddressPageState extends State<AddressPage> {
                       color: Colors.white,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
+                          color: Colors.black.withValues(alpha: 0.05),
                           blurRadius: 10,
                           offset: const Offset(0, -2),
                         ),
@@ -279,8 +279,8 @@ class _AddressPageState extends State<AddressPage> {
                           onPressed: () async {
                             if (formKey.currentState!.validate()) {
                               final newAddress = AddressModel(
-                                idAddress: address?.idAddress,
-                                idUser: _userId,
+                                id: address?.id,
+                                userId: _userId,
                                 namaLengkap: namaController.text,
                                 nomorTelepon: teleponController.text,
                                 alamatLengkap: alamatController.text,
@@ -372,7 +372,7 @@ class _AddressPageState extends State<AddressPage> {
                       Icon(
                         Icons.location_off_outlined,
                         size: 80,
-                        color: textLight.withOpacity(0.5),
+                        color: textLight.withValues(alpha: 0.5),
                       ),
                       const SizedBox(height: 16),
                       const Text(
@@ -384,7 +384,7 @@ class _AddressPageState extends State<AddressPage> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      Text(
+                      const Text(
                         'Tambahkan alamat pengiriman Anda',
                         style: TextStyle(
                           fontSize: 14,
@@ -421,7 +421,7 @@ class _AddressPageState extends State<AddressPage> {
             : null,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.08),
+            color: Colors.grey.withValues(alpha: 0.08),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -441,7 +441,7 @@ class _AddressPageState extends State<AddressPage> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: primaryColor.withOpacity(0.1),
+                        color: primaryColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
@@ -459,7 +459,7 @@ class _AddressPageState extends State<AddressPage> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.green.withOpacity(0.1),
+                          color: Colors.green.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: const Text(
@@ -514,7 +514,7 @@ class _AddressPageState extends State<AddressPage> {
                       _showAddEditBottomSheet(address: address);
                     } else if (value == 'primary') {
                       await _addressController.setPrimaryAddress(
-                          _userId!, address.idAddress!);
+                          _userId!, address.id!);
                       _loadAddresses();
                     } else if (value == 'delete') {
                       final confirm = await showDialog<bool>(
