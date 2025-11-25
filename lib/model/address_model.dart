@@ -1,42 +1,18 @@
-import 'package:hive/hive.dart';
-
-part 'address_model.g.dart';
-
-@HiveType(typeId: 4)
-class AddressModel extends HiveObject {
-  @HiveField(0)
-  String? idAddress;
-
-  @HiveField(1)
-  String? idUser;
-
-  @HiveField(2)
+class AddressModel {
+  int? id;
+  int? userId;
   String? namaLengkap;
-
-  @HiveField(3)
   String? nomorTelepon;
-
-  @HiveField(4)
   String? alamatLengkap;
-
-  @HiveField(5)
   String? kota;
-
-  @HiveField(6)
   String? provinsi;
-
-  @HiveField(7)
   String? kodePos;
-
-  @HiveField(8)
   bool? isPrimary;
-
-  @HiveField(9)
-  String? label; // Rumah, Kantor, dll
+  String? label;
 
   AddressModel({
-    this.idAddress,
-    this.idUser,
+    this.id,
+    this.userId,
     this.namaLengkap,
     this.nomorTelepon,
     this.alamatLengkap,
@@ -47,42 +23,63 @@ class AddressModel extends HiveObject {
     this.label = 'Rumah',
   });
 
-  // Generate ID unik
-  String generateId() {
-    return 'ADDR_${idUser}_${DateTime.now().millisecondsSinceEpoch}';
-  }
-
   Map<String, dynamic> toMap() {
     return {
-      'idAddress': idAddress,
-      'idUser': idUser,
-      'namaLengkap': namaLengkap,
-      'nomorTelepon': nomorTelepon,
-      'alamatLengkap': alamatLengkap,
+      'id': id,
+      'user_id': userId,
+      'nama_lengkap': namaLengkap,
+      'nomor_telepon': nomorTelepon,
+      'alamat_lengkap': alamatLengkap,
       'kota': kota,
       'provinsi': provinsi,
-      'kodePos': kodePos,
-      'isPrimary': isPrimary,
+      'kode_pos': kodePos,
+      'is_primary': isPrimary == true ? 1 : 0,
       'label': label,
     };
   }
 
   factory AddressModel.fromMap(Map<String, dynamic> map) {
     return AddressModel(
-      idAddress: map['idAddress'],
-      idUser: map['idUser'],
-      namaLengkap: map['namaLengkap'],
-      nomorTelepon: map['nomorTelepon'],
-      alamatLengkap: map['alamatLengkap'],
-      kota: map['kota'],
-      provinsi: map['provinsi'],
-      kodePos: map['kodePos'],
-      isPrimary: map['isPrimary'] ?? false,
-      label: map['label'] ?? 'Rumah',
+      id: map['id'] as int?,
+      userId: map['user_id'] as int?,
+      namaLengkap: map['nama_lengkap'] as String?,
+      nomorTelepon: map['nomor_telepon'] as String?,
+      alamatLengkap: map['alamat_lengkap'] as String?,
+      kota: map['kota'] as String?,
+      provinsi: map['provinsi'] as String?,
+      kodePos: map['kode_pos'] as String?,
+      isPrimary: map['is_primary'] == 1,
+      label: map['label'] as String? ?? 'Rumah',
     );
   }
 
   String get alamatSingkat {
     return '$kota, $provinsi';
+  }
+
+  AddressModel copy({
+    int? id,
+    int? userId,
+    String? namaLengkap,
+    String? nomorTelepon,
+    String? alamatLengkap,
+    String? kota,
+    String? provinsi,
+    String? kodePos,
+    bool? isPrimary,
+    String? label,
+  }) {
+    return AddressModel(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      namaLengkap: namaLengkap ?? this.namaLengkap,
+      nomorTelepon: nomorTelepon ?? this.nomorTelepon,
+      alamatLengkap: alamatLengkap ?? this.alamatLengkap,
+      kota: kota ?? this.kota,
+      provinsi: provinsi ?? this.provinsi,
+      kodePos: kodePos ?? this.kodePos,
+      isPrimary: isPrimary ?? this.isPrimary,
+      label: label ?? this.label,
+    );
   }
 }

@@ -1,72 +1,156 @@
-import 'package:hive_flutter/hive_flutter.dart';
 import '../model/cart_model.dart';
+import '../services/database_helper.dart';
+import 'auth_controller.dart';
 
 class ControllerCart {
-  Future<void> tambahKeCart(String idProduk, int jumlah) async {
-    var box = await Hive.openBox<CartModel>('box_cart');
-    
-    CartModel? existing;
-    try {
-      existing = box.values.firstWhere((item) => item.idProduk == idProduk);
-    } catch (e) {
-      existing = null;
-    }
+  final dbHelper = DatabaseHelper.instance;
+  final authController = AuthController();
 
-    if (existing != null && existing.idProduk != null) {
-      existing.jumlah = (existing.jumlah ?? 0) + jumlah;
-      await existing.save();
-    } else {
-      await box.add(CartModel(idProduk: idProduk, jumlah: jumlah));
+  Future<int?> _getCurrentUserId() async {
+    final user = await authController.getUserLogin();
+    return user?.id;
+  }
+
+  Future<void> tambahKeCart(String idProduk, int jumlah) async {
+    try {
+      final userId = await _getCurrentUserId();
+      if (userId == null) return;
+
+      final db = await dbHelper.database;
+
+      // Cek apakah produk sudah ada di cart
+      final List<Map<String, dynamic>> existing = await db.query(
+        'cart',
+        where: 'user_id = ? AND id_produk = ?',
+        whereArgs: [userId, idProduk],
+      );
+
+      if (existing.isNotEmpty) {
+        // Update jumlah
+        final currentJumlah = existing.first['jumlah'] as int;
+        await db.update(
+          'cart',
+          {'jumlah': currentJumlah + jumlah},
+          where: 'id = ?',
+          whereArgs: [existing.first['id']],
+        );
+      } else {
+        // Insert baru
+        await db.insert('cart', {
+          'user_id': userId,
+          'id_produk': idProduk,
+          'jumlah': jumlah,
+        });
+      }
+    } catch (e) {
+      print('Error tambahKeCart: $e');
     }
   }
 
   Future<void> updateJumlah(String idProduk, int jumlahBaru) async {
-    var box = await Hive.openBox<CartModel>('box_cart');
-    
     try {
-      var item = box.values.firstWhere((c) => c.idProduk == idProduk);
+      final userId = await _getCurrentUserId();
+      if (userId == null) return;
+
+      final db = await dbHelper.database;
+
       if (jumlahBaru <= 0) {
-        await item.delete();
+        // Hapus dari cart
+        await db.delete(
+          'cart',
+          where: 'user_id = ? AND id_produk = ?',
+          whereArgs: [userId, idProduk],
+        );
       } else {
-        item.jumlah = jumlahBaru;
-        await item.save();
+        // Update jumlah
+        await db.update(
+          'cart',
+          {'jumlah': jumlahBaru},
+          where: 'user_id = ? AND id_produk = ?',
+          whereArgs: [userId, idProduk],
+        );
       }
     } catch (e) {
-      // Item tidak ditemukan
+      print('Error updateJumlah: $e');
     }
   }
 
   Future<void> hapusDariCart(String idProduk) async {
-    var box = await Hive.openBox<CartModel>('box_cart');
-    
     try {
-      var item = box.values.firstWhere((c) => c.idProduk == idProduk);
-      await item.delete();
+      final userId = await _getCurrentUserId();
+      if (userId == null) return;
+
+      final db = await dbHelper.database;
+
+      await db.delete(
+        'cart',
+        where: 'user_id = ? AND id_produk = ?',
+        whereArgs: [userId, idProduk],
+      );
     } catch (e) {
-      // Item tidak ditemukan
+      print('Error hapusDariCart: $e');
     }
   }
 
   Future<Map<String, int>> ambilSemuaCart() async {
-    var box = await Hive.openBox<CartModel>('box_cart');
-    Map<String, int> cart = {};
-    
-    for (var item in box.values) {
-      if (item.idProduk != null && item.jumlah != null) {
-        cart[item.idProduk!] = item.jumlah!;
+    try {
+      final userId = await _getCurrentUserId();
+      if (userId == null) return {};
+
+      final db = await dbHelper.database;
+
+      final List<Map<String, dynamic>> maps = await db.query(
+        'cart',
+        where: 'user_id = ?',
+        whereArgs: [userId],
+      );
+
+      Map<String, int> cart = {};
+      for (var map in maps) {
+        cart[map['id_produk'] as String] = map['jumlah'] as int;
       }
+
+      return cart;
+    } catch (e) {
+      print('Error ambilSemuaCart: $e');
+      return {};
     }
-    
-    return cart;
   }
 
   Future<void> kosongkanCart() async {
-    var box = await Hive.openBox<CartModel>('box_cart');
-    await box.clear();
+    try {
+      final userId = await _getCurrentUserId();
+      if (userId == null) return;
+
+      final db = await dbHelper.database;
+
+      await db.delete(
+        'cart',
+        where: 'user_id = ?',
+        whereArgs: [userId],
+      );
+    } catch (e) {
+      print('Error kosongkanCart: $e');
+    }
   }
 
   Future<int> hitungTotalItem() async {
-    var box = await Hive.openBox<CartModel>('box_cart');
-    return box.values.length;
+    try {
+      final userId = await _getCurrentUserId();
+      if (userId == null) return 0;
+
+      final db = await dbHelper.database;
+
+      final List<Map<String, dynamic>> result = await db.query(
+        'cart',
+        where: 'user_id = ?',
+        whereArgs: [userId],
+      );
+
+      return result.length;
+    } catch (e) {
+      print('Error hitungTotalItem: $e');
+      return 0;
+    }
   }
 }

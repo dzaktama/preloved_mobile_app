@@ -1,99 +1,124 @@
-import 'package:hive_flutter/hive_flutter.dart';
 import '../model/address_model.dart';
+import '../services/database_helper.dart';
 
 class AddressController {
+  final dbHelper = DatabaseHelper.instance;
+
   // Tambah alamat baru
   Future<bool> tambahAlamat(AddressModel alamat) async {
     try {
-      var box = await Hive.openBox<AddressModel>('box_address');
-      
-      // Generate ID
-      alamat.idAddress = alamat.generateId();
-      
+      final db = await dbHelper.database;
+
       // Jika ini alamat pertama atau set sebagai primary, update alamat lain
       if (alamat.isPrimary == true) {
-        await _setPrimaryAddress(alamat.idUser!, alamat.idAddress!);
+        await _setPrimaryAddress(alamat.userId!, null);
       }
-      
-      await box.add(alamat);
+
+      await db.insert('addresses', alamat.toMap());
       return true;
     } catch (e) {
+      print('Error tambahAlamat: $e');
       return false;
     }
   }
 
   // Ambil semua alamat user
-  Future<List<AddressModel>> ambilAlamatUser(String idUser) async {
+  Future<List<AddressModel>> ambilAlamatUser(int userId) async {
     try {
-      var box = await Hive.openBox<AddressModel>('box_address');
-      return box.values
-          .where((alamat) => alamat.idUser == idUser)
-          .toList()
-        ..sort((a, b) {
-          // Primary address di atas
-          if (a.isPrimary == true && b.isPrimary != true) return -1;
-          if (b.isPrimary == true && a.isPrimary != true) return 1;
-          return 0;
-        });
+      final db = await dbHelper.database;
+
+      final List<Map<String, dynamic>> maps = await db.query(
+        'addresses',
+        where: 'user_id = ?',
+        whereArgs: [userId],
+        orderBy: 'is_primary DESC',
+      );
+
+      return List.generate(maps.length, (i) {
+        return AddressModel.fromMap(maps[i]);
+      });
     } catch (e) {
+      print('Error ambilAlamatUser: $e');
       return [];
     }
   }
 
   // Ambil primary address
-  Future<AddressModel?> ambilPrimaryAddress(String idUser) async {
+  Future<AddressModel?> ambilPrimaryAddress(int userId) async {
     try {
-      var box = await Hive.openBox<AddressModel>('box_address');
-      return box.values.firstWhere(
-        (alamat) => alamat.idUser == idUser && alamat.isPrimary == true,
+      final db = await dbHelper.database;
+
+      final List<Map<String, dynamic>> maps = await db.query(
+        'addresses',
+        where: 'user_id = ? AND is_primary = ?',
+        whereArgs: [userId, 1],
+        limit: 1,
       );
+
+      if (maps.isEmpty) {
+        return null;
+      }
+
+      return AddressModel.fromMap(maps.first);
     } catch (e) {
+      print('Error ambilPrimaryAddress: $e');
       return null;
     }
   }
 
   // Set alamat sebagai primary
-  Future<bool> setPrimaryAddress(String idUser, String idAddress) async {
+  Future<bool> setPrimaryAddress(int userId, int addressId) async {
     try {
-      await _setPrimaryAddress(idUser, idAddress);
+      await _setPrimaryAddress(userId, addressId);
       return true;
     } catch (e) {
+      print('Error setPrimaryAddress: $e');
       return false;
     }
   }
 
-  Future<void> _setPrimaryAddress(String idUser, String idAddress) async {
-    var box = await Hive.openBox<AddressModel>('box_address');
-    
+  Future<void> _setPrimaryAddress(int userId, int? addressId) async {
+    final db = await dbHelper.database;
+
     // Set semua alamat user jadi false
-    for (var alamat in box.values) {
-      if (alamat.idUser == idUser && alamat.isPrimary == true) {
-        alamat.isPrimary = false;
-        await alamat.save();
-      }
-    }
-    
+    await db.update(
+      'addresses',
+      {'is_primary': 0},
+      where: 'user_id = ?',
+      whereArgs: [userId],
+    );
+
     // Set alamat yang dipilih jadi true
-    for (var alamat in box.values) {
-      if (alamat.idAddress == idAddress) {
-        alamat.isPrimary = true;
-        await alamat.save();
-        break;
-      }
+    if (addressId != null) {
+      await db.update(
+        'addresses',
+        {'is_primary': 1},
+        where: 'id = ?',
+        whereArgs: [addressId],
+      );
     }
   }
 
   // Update alamat
   Future<bool> updateAlamat(AddressModel alamat) async {
     try {
+      final db = await dbHelper.database;
+
       // Jika diset sebagai primary
       if (alamat.isPrimary == true) {
-        await _setPrimaryAddress(alamat.idUser!, alamat.idAddress!);
+        await _setPrimaryAddress(alamat.userId!, alamat.id);
       }
-      
-      await alamat.save();
+
+      await db.update(
+        'addresses',
+        alamat.toMap(),
+        where: 'id = ?',
+        whereArgs: [alamat.id],
+      );
+
       return true;
     } catch (e) {
+      print('Error updateAlamat: $e');
       return false;
     }
   }
@@ -101,23 +126,33 @@ class AddressController {
   // Hapus alamat
   Future<bool> hapusAlamat(AddressModel alamat) async {
     try {
-      // Cek apakah ini primary address
+      final db = await dbHelper.database;
+
       bool wasPrimary = alamat.isPrimary == true;
-      String userId = alamat.idUser!;
-      
-      await alamat.delete();
-      
+      int userId = alamat.userId!;
+
+      await db.delete(
+        'addresses',
+        where: 'id = ?',
+        whereArgs: [alamat.id],
+      );
+
       // Jika yang dihapus primary, set alamat pertama sebagai primary
       if (wasPrimary) {
-        var addresses = await ambilAlamatUser(userId);
+        final addresses = await ambilAlamatUser(userId);
         if (addresses.isNotEmpty) {
-          addresses.first.isPrimary = true;
-          await addresses.first.save();
+          await db.update(
+            'addresses',
+            {'is_primary': 1},
+            where: 'id = ?',
+            whereArgs: [addresses.first.id],
+          );
         }
       }
-      
+
       return true;
     } catch (e) {
+      print('Error hapusAlamat: $e');
       return false;
     }
   }
