@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../controller/auth_controller.dart';
 import '../../controller/profile_controller.dart';
-import '../../controller/controller_address.dart';
 import '../../model/userModel.dart';
 import '../loginScreen.dart';
 import '../transaksi/halaman_riwayat.dart';
@@ -19,7 +18,6 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   final AuthController _authController = AuthController();
   final ProfileController _profileController = ProfileController();
-  final AddressController _addressController = AddressController();
   
   UserModel? _currentUser;
   bool _isLoading = true;
@@ -40,8 +38,9 @@ class _ProfilePageState extends State<ProfilePage> {
     setState(() => _isLoading = true);
     
     final user = await _authController.getUserLogin();
-    if (user != null && user.key != null) {
-      final stats = await _profileController.getStatistics(user.key.toString());
+    if (user != null && user.id != null) {
+      // FIX: Gunakan user.id (int) langsung, bukan user.key
+      final stats = await _profileController.getStatistics(user.id!);
       setState(() {
         _currentUser = user;
         _statistics = stats;
@@ -529,7 +528,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Change Password'),
         content: Form(
@@ -580,7 +579,7 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
@@ -592,16 +591,19 @@ class _ProfilePageState extends State<ProfilePage> {
                   passwordBaru: newPasswordController.text,
                 );
 
-                if (mounted) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(success
-                          ? 'Password changed successfully'
-                          : 'Old password is incorrect'),
-                      backgroundColor: success ? Colors.green : Colors.red,
-                    ),
-                  );
+                if (dialogContext.mounted) {
+                  Navigator.pop(dialogContext);
+                  
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(success
+                            ? 'Password changed successfully'
+                            : 'Old password is incorrect'),
+                        backgroundColor: success ? Colors.green : Colors.red,
+                      ),
+                    );
+                  }
                 }
               }
             },
@@ -618,7 +620,7 @@ class _ProfilePageState extends State<ProfilePage> {
   void _showLogoutDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
@@ -634,7 +636,7 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text(
               'Cancel',
               style: TextStyle(color: textLight),
@@ -644,9 +646,9 @@ class _ProfilePageState extends State<ProfilePage> {
             onPressed: () async {
               await _authController.logout();
               
-              if (!context.mounted) return;
+              if (!dialogContext.mounted) return;
               
-              Navigator.of(context).pushAndRemoveUntil(
+              Navigator.of(dialogContext).pushAndRemoveUntil(
                 MaterialPageRoute(builder: (context) => const LoginPage()),
                 (route) => false,
               );

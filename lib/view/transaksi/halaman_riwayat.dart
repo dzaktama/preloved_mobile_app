@@ -53,6 +53,31 @@ class _HalamanRiwayatState extends State<HalamanRiwayat> {
     return _daftarTransaksi.where((t) => t.status == _filterStatus).toList();
   }
 
+  // FIX: Helper method untuk format tanggal dengan safe parsing
+  String _formatTanggal(TransaksiModel transaksi) {
+    try {
+      final tanggalDateTime = transaksi.tanggalDateTime;
+      if (tanggalDateTime != null) {
+        return DateFormat('dd MMM yyyy, HH:mm').format(tanggalDateTime);
+      }
+      return 'No date';
+    } catch (e) {
+      return 'Invalid date';
+    }
+  }
+
+  String _formatTanggalLengkap(TransaksiModel transaksi) {
+    try {
+      final tanggalDateTime = transaksi.tanggalDateTime;
+      if (tanggalDateTime != null) {
+        return DateFormat('dd MMMM yyyy, HH:mm').format(tanggalDateTime);
+      }
+      return 'No date';
+    } catch (e) {
+      return 'Invalid date';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -168,7 +193,8 @@ class _HalamanRiwayatState extends State<HalamanRiwayat> {
 
   Widget _buildOrderCard(TransaksiModel transaksi) {
     final statusColor = _getStatusColor(transaksi.status ?? 'Pending');
-    final tanggal = DateFormat('dd MMM yyyy, HH:mm').format(transaksi.tanggalTransaksi ?? DateTime.now());
+    // FIX: Gunakan helper method untuk format tanggal
+    final tanggal = _formatTanggal(transaksi);
     
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -430,7 +456,8 @@ class _HalamanRiwayatState extends State<HalamanRiwayat> {
                         children: [
                           _buildInfoRow('Order ID', transaksi.idTransaksi ?? '-'),
                           const Divider(height: 24),
-                          _buildInfoRow('Date', DateFormat('dd MMMM yyyy, HH:mm').format(transaksi.tanggalTransaksi ?? DateTime.now())),
+                          // FIX: Gunakan helper method untuk format tanggal lengkap
+                          _buildInfoRow('Date', _formatTanggalLengkap(transaksi)),
                           const Divider(height: 24),
                           _buildInfoRow('Status', transaksi.status ?? 'Pending'),
                           const Divider(height: 24),
@@ -470,7 +497,8 @@ class _HalamanRiwayatState extends State<HalamanRiwayat> {
                                 height: 60,
                                 fit: BoxFit.cover,
                                 errorBuilder: (context, error, stackTrace) {
-                                  return Container(width: 60,
+                                  return Container(
+                                    width: 60,
                                     height: 60,
                                     color: Colors.grey[200],
                                     child: const Icon(Icons.image, size: 30),
