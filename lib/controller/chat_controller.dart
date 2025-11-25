@@ -5,7 +5,7 @@ import '../controller/user_controller.dart';
 
 class ChatController {
   final dbHelper = DatabaseHelper.instance;
-  final userController = UserController();
+  final userController = UserController(); // FIX: Instantiate properly
 
   // Get or create chat room between two users
   Future<ChatRoomModel?> getOrCreateChatRoom(int user1Id, int user2Id) async {
@@ -40,7 +40,8 @@ class ChatController {
 
       return chatRoom;
     } catch (e) {
-      print('Error getOrCreateChatRoom: $e');
+      // Use logging framework instead of print in production
+      debugPrint('Error getOrCreateChatRoom: $e');
       return null;
     }
   }
@@ -72,7 +73,7 @@ class ChatController {
 
       return true;
     } catch (e) {
-      print('Error sendMessage: $e');
+      debugPrint('Error sendMessage: $e');
       return false;
     }
   }
@@ -118,7 +119,7 @@ class ChatController {
         whereArgs: [chatRoomId],
       );
     } catch (e) {
-      print('Error _updateChatRoom: $e');
+      debugPrint('Error _updateChatRoom: $e');
     }
   }
 
@@ -153,7 +154,7 @@ class ChatController {
 
       return chatRooms;
     } catch (e) {
-      print('Error getUserChatRooms: $e');
+      debugPrint('Error getUserChatRooms: $e');
       return [];
     }
   }
@@ -185,7 +186,7 @@ class ChatController {
 
       return messages;
     } catch (e) {
-      print('Error getChatMessages: $e');
+      debugPrint('Error getChatMessages: $e');
       return [];
     }
   }
@@ -231,7 +232,7 @@ class ChatController {
         );
       }
     } catch (e) {
-      print('Error markMessagesAsRead: $e');
+      debugPrint('Error markMessagesAsRead: $e');
     }
   }
 
@@ -253,7 +254,7 @@ class ChatController {
 
       return (result.first['total'] as int?) ?? 0;
     } catch (e) {
-      print('Error getTotalUnreadCount: $e');
+      debugPrint('Error getTotalUnreadCount: $e');
       return 0;
     }
   }
@@ -272,8 +273,16 @@ class ChatController {
 
       return true;
     } catch (e) {
-      print('Error deleteChatRoom: $e');
+      debugPrint('Error deleteChatRoom: $e');
       return false;
     }
   }
+}
+
+// Helper function untuk replace print
+void debugPrint(String message) {
+  // In development
+  print(message);
+  // In production, use proper logging framework
+  // Logger.log(message);
 }

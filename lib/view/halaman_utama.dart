@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import '../controller/home_controller.dart';
 import '../controller/controller_cart.dart';
+import '../controller/user_controller.dart';
 import '../model/product_model.dart';
+import '../model/userModel.dart';
 import 'package:preloved_mobile_app/view/profil/profile.dart';
+import 'package:preloved_mobile_app/view/profil/seller_profil_page.dart';
 import 'package:preloved_mobile_app/view/cart.dart';
 import 'package:preloved_mobile_app/view/like.dart';
 import 'package:preloved_mobile_app/view/transaksi/halaman_checkout.dart';
@@ -17,6 +20,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final HomeController _controller = HomeController();
   final ControllerCart _controllerCart = ControllerCart();
+  final UserController _userController = UserController();
   final TextEditingController _searchController = TextEditingController();
 
   Set<String> favoriteProducts = {};
@@ -542,145 +546,145 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildProductCard(ProductModel product) {
-  final isFavorite = favoriteProducts.contains(product.id);
-  
-  return InkWell(
-    onTap: () {
-      _showProductDetail(product);
-    },
-    borderRadius: BorderRadius.circular(12),
-    child: Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.08),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Stack(
-            children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                child: Image.network(
-                  product.linkGambar,
-                  height: 140,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      height: 140,
-                      color: Colors.grey[200],
-                      child: const Icon(Icons.image_not_supported, size: 40, color: textLight),
-                    );
-                  },
-                ),
-              ),
-              Positioned(
-                top: 8,
-                right: 8,
-                child: GestureDetector(
-                  onTap: () => _toggleFavorite(product.id),
-                  child: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Icon(
-                      isFavorite ? Icons.favorite : Icons.favorite_border,
-                      size: 18,
-                      color: isFavorite ? primaryColor : textLight,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          
-          Padding(
-            padding: const EdgeInsets.all(10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    final isFavorite = favoriteProducts.contains(product.id);
+    
+    return InkWell(
+      onTap: () {
+        _showProductDetail(product);
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.08),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Stack(
               children: [
-                Text(
-                  product.brand,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: textLight,
-                    fontWeight: FontWeight.w500,
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                  child: Image.network(
+                    product.linkGambar,
+                    height: 140,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        height: 140,
+                        color: Colors.grey[200],
+                        child: const Icon(Icons.image_not_supported, size: 40, color: textLight),
+                      );
+                    },
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
-                
-                const SizedBox(height: 4),
-                
-                Text(
-                  product.namaBarang,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: textDark,
-                    height: 1.3,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                
-                const SizedBox(height: 8),
-                
-                Text(
-                  product.harga,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: primaryColor,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                
-                const SizedBox(height: 6),
-                
-                Row(
-                  children: [
-                    Icon(Icons.star, size: 11, color: Colors.amber[700]),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        product.kondisi,
-                        style: const TextStyle(
-                          fontSize: 10,
-                          color: textLight,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: GestureDetector(
+                    onTap: () => _toggleFavorite(product.id),
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        isFavorite ? Icons.favorite : Icons.favorite_border,
+                        size: 18,
+                        color: isFavorite ? primaryColor : textLight,
                       ),
                     ),
-                  ],
+                  ),
                 ),
               ],
             ),
-          ),
-        ],
+            
+            Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    product.brand,
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: textLight,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  
+                  const SizedBox(height: 4),
+                  
+                  Text(
+                    product.namaBarang,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: textDark,
+                      height: 1.3,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  
+                  const SizedBox(height: 8),
+                  
+                  Text(
+                    product.harga,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: primaryColor,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  
+                  const SizedBox(height: 6),
+                  
+                  Row(
+                    children: [
+                      Icon(Icons.star, size: 11, color: Colors.amber[700]),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          product.kondisi,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: textLight,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildErrorWidget() {
     return Center(
@@ -725,6 +729,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  // ========== PRODUCT DETAIL WITH SELLER PROFILE ==========
   void _showProductDetail(ProductModel product) {
     final isFavorite = favoriteProducts.contains(product.id);
 
@@ -825,6 +830,90 @@ class _HomePageState extends State<HomePage> {
                             ],
                           ),
                           const SizedBox(height: 20),
+                          
+                          // ========== SELLER CARD - NEW FEATURE ==========
+                          FutureBuilder<UserModel?>(
+                            future: _getProductSeller(product),
+                            builder: (context, snapshot) {
+                              if (!snapshot.hasData || snapshot.data == null) {
+                                return const SizedBox.shrink();
+                              }
+                              
+                              final seller = snapshot.data!;
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 20),
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: backgroundColor,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: borderColor),
+                                ),
+                                child: InkWell(
+                                  onTap: () {
+                                    Navigator.pop(context);
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => SellerProfilePage(
+                                          sellerId: seller.id!,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Row(
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 24,
+                                        backgroundColor: primaryColor.withOpacity(0.1),
+                                        child: Text(
+                                          seller.uName?.substring(0, 1).toUpperCase() ?? 'S',
+                                          style: const TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                            color: primaryColor,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              seller.uName ?? 'Seller',
+                                              style: const TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.bold,
+                                                color: textDark,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Row(
+                                              children: [
+                                                const Icon(Icons.star, size: 14, color: Colors.amber),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  '${seller.ratingDisplay} • ${seller.responseRateDisplay} response',
+                                                  style: const TextStyle(
+                                                    fontSize: 12,
+                                                    color: textLight,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const Icon(Icons.chevron_right, color: textLight),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                          // ========== END SELLER CARD ==========
+
                           Row(
                             children: [
                               Chip(
@@ -971,7 +1060,8 @@ class _HomePageState extends State<HomePage> {
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
-                                  elevation: 0),
+                                  elevation: 0,
+                                ),
                               ),
                             ),
                           ),
@@ -1019,6 +1109,21 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
     );
+  }
+
+  // ========== HELPER METHOD TO GET SELLER ==========
+  Future<UserModel?> _getProductSeller(ProductModel product) async {
+    try {
+      // Get all users and return first one as demo seller
+      // In production, product should have seller_id field
+      final users = await _userController.getAllUsers();
+      if (users.isNotEmpty) {
+        return users.first;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
   }
 
   @override

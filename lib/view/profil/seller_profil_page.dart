@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../model/userModel.dart';
 import '../../model/barang_model.dart';
-import '../../model/review_model.dart';
+import '../../model/review_model.dart' as review;
 import '../../controller/user_controller.dart';
 import '../../controller/auth_controller.dart';
 import '../../controller/chat_controller.dart';
@@ -25,7 +25,7 @@ class _SellerProfilePageState extends State<SellerProfilePage> with SingleTicker
 
   UserModel? _seller;
   List<BarangJualanModel> _products = [];
-  List<ReviewModel> _reviews = [];
+  List<review.ReviewModel> _reviews = [];
   Map<String, dynamic> _statistics = {};
   bool _isLoading = true;
   int? _currentUserId;
@@ -71,7 +71,25 @@ class _SellerProfilePageState extends State<SellerProfilePage> with SingleTicker
   }
 
   Future<void> _openChat() async {
-    if (_currentUserId == null) return;
+    if (_currentUserId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please login to chat'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (_currentUserId == widget.sellerId) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('You cannot chat with yourself'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
 
     final chatRoom = await _chatController.getOrCreateChatRoom(
       _currentUserId!,
@@ -127,7 +145,7 @@ class _SellerProfilePageState extends State<SellerProfilePage> with SingleTicker
                 background: Container(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [primaryColor, primaryColor.withOpacity(0.8)],
+                      colors: [primaryColor, primaryColor.withValues(alpha: 0.8)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
@@ -183,7 +201,7 @@ class _SellerProfilePageState extends State<SellerProfilePage> with SingleTicker
                       Container(width: 1, height: 40, color: Colors.grey[300]),
                       _buildStatItem('Sold', '${_statistics['sold'] ?? 0}'),
                       Container(width: 1, height: 40, color: Colors.grey[300]),
-                      _buildStatItem('Response Rate', _seller?.responseRateDisplay ?? '100%'),
+                      _buildStatItem('Response', _seller?.responseRateDisplay ?? '100%'),
                     ],
                   ),
 
@@ -212,7 +230,7 @@ class _SellerProfilePageState extends State<SellerProfilePage> with SingleTicker
                         Expanded(
                           child: ElevatedButton.icon(
                             onPressed: _openChat,
-                            icon: const Icon(Icons.chat_bubble_outline),
+                            icon: const Icon(Icons.chat_bubble_outline, size: 18),
                             label: const Text('Chat'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: primaryColor,
@@ -221,6 +239,7 @@ class _SellerProfilePageState extends State<SellerProfilePage> with SingleTicker
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
+                              elevation: 0,
                             ),
                           ),
                         ),
@@ -238,6 +257,7 @@ class _SellerProfilePageState extends State<SellerProfilePage> with SingleTicker
                 labelColor: primaryColor,
                 unselectedLabelColor: textLight,
                 indicatorColor: primaryColor,
+                indicatorWeight: 3,
                 tabs: const [
                   Tab(text: 'Products'),
                   Tab(text: 'Reviews'),
@@ -321,7 +341,7 @@ class _SellerProfilePageState extends State<SellerProfilePage> with SingleTicker
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.inventory_2_outlined, size: 80, color: textLight.withOpacity(0.5)),
+            Icon(Icons.inventory_2_outlined, size: 80, color: textLight.withValues(alpha: 0.5)),
             const SizedBox(height: 16),
             const Text(
               'No products yet',
@@ -358,7 +378,7 @@ class _SellerProfilePageState extends State<SellerProfilePage> with SingleTicker
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.08),
+              color: Colors.grey.withValues(alpha: 0.08),
               blurRadius: 10,
               offset: const Offset(0, 2),
             ),
@@ -429,7 +449,7 @@ class _SellerProfilePageState extends State<SellerProfilePage> with SingleTicker
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.rate_review_outlined, size: 80, color: textLight.withOpacity(0.5)),
+            Icon(Icons.rate_review_outlined, size: 80, color: textLight.withValues(alpha: 0.5)),
             const SizedBox(height: 16),
             const Text(
               'No reviews yet',
@@ -449,7 +469,7 @@ class _SellerProfilePageState extends State<SellerProfilePage> with SingleTicker
     );
   }
 
-  Widget _buildReviewCard(ReviewModel review) {
+  Widget _buildReviewCard(review.ReviewModel reviewItem) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -458,7 +478,7 @@ class _SellerProfilePageState extends State<SellerProfilePage> with SingleTicker
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.08),
+            color: Colors.grey.withValues(alpha: 0.08),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -471,9 +491,9 @@ class _SellerProfilePageState extends State<SellerProfilePage> with SingleTicker
             children: [
               CircleAvatar(
                 radius: 20,
-                backgroundColor: primaryColor.withOpacity(0.1),
+                backgroundColor: primaryColor.withValues(alpha: 0.1),
                 child: Text(
-                  review.buyerName?.substring(0, 1).toUpperCase() ?? 'U',
+                  reviewItem.buyerName?.substring(0, 1).toUpperCase() ?? 'U',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -487,7 +507,7 @@ class _SellerProfilePageState extends State<SellerProfilePage> with SingleTicker
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      review.buyerName ?? 'User',
+                      reviewItem.buyerName ?? 'User',
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
@@ -499,15 +519,15 @@ class _SellerProfilePageState extends State<SellerProfilePage> with SingleTicker
                       children: [
                         ...List.generate(5, (i) {
                           return Icon(
-                            i < (review.rating ?? 0) ? Icons.star : Icons.star_border,
+                            i < (reviewItem.rating ?? 0) ? Icons.star : Icons.star_border,
                             size: 14,
                             color: Colors.amber,
                           );
                         }),
                         const SizedBox(width: 8),
                         Text(
-                          review.createdAtDateTime != null
-                              ? DateFormat('dd MMM yyyy').format(review.createdAtDateTime!)
+                          reviewItem.createdAtDateTime != null
+                              ? DateFormat('dd MMM yyyy').format(reviewItem.createdAtDateTime!)
                               : '',
                           style: const TextStyle(fontSize: 11, color: textLight),
                         ),
@@ -518,10 +538,10 @@ class _SellerProfilePageState extends State<SellerProfilePage> with SingleTicker
               ),
             ],
           ),
-          if (review.reviewText != null && review.reviewText!.isNotEmpty) ...[
+          if (reviewItem.reviewText != null && reviewItem.reviewText!.isNotEmpty) ...[
             const SizedBox(height: 12),
             Text(
-              review.reviewText!,
+              reviewItem.reviewText!,
               style: const TextStyle(
                 fontSize: 13,
                 color: textDark,
