@@ -1,3 +1,4 @@
+// Path: lib/view/jual/halaman_tambah.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../controller/controller_barang.dart';
@@ -82,12 +83,12 @@ class _HalamanTambahBarangState extends State<HalamanTambahBarang> {
                   Navigator.pop(context);
                   try {
                     final path = await _controller.ambilFotoDariKamera();
-                    if (path != null) {
+                    if (path != null && mounted) {
                       setState(() => _pathGambar = path);
                     }
                   } catch (e) {
                     if (mounted) {
-                      _tampilkanSnackBar('Gagal mengambil foto dari kamera');
+                      _tampilkanSnackBar('Gagal mengambil foto dari kamera', isError: true);
                     }
                   }
                 },
@@ -99,12 +100,12 @@ class _HalamanTambahBarangState extends State<HalamanTambahBarang> {
                   Navigator.pop(context);
                   try {
                     final path = await _controller.ambilFotoDariGaleri();
-                    if (path != null) {
+                    if (path != null && mounted) {
                       setState(() => _pathGambar = path);
                     }
                   } catch (e) {
                     if (mounted) {
-                      _tampilkanSnackBar('Gagal mengambil foto dari galeri');
+                      _tampilkanSnackBar('Gagal mengambil foto dari galeri', isError: true);
                     }
                   }
                 },
@@ -117,55 +118,133 @@ class _HalamanTambahBarangState extends State<HalamanTambahBarang> {
   }
 
   Future<void> _simpanBarang() async {
-    if (!_formKey.currentState!.validate()) return;
+    // 1. TUTUP KEYBOARD TERLEBIH DAHULU (PENTING UNTUK MENCEGAH BLACK SCREEN)
+    FocusScope.of(context).unfocus();
 
-    if (_pathGambar == null) {
-      _tampilkanSnackBar('Foto barang wajib diisi!');
+    // Validasi form
+    if (!_formKey.currentState!.validate()) {
+      _tampilkanSnackBar('Mohon lengkapi semua field yang wajib diisi', isError: true);
       return;
     }
 
+    // Validasi foto
+    if (_pathGambar == null || _pathGambar!.isEmpty) {
+      _tampilkanSnackBar('Foto barang wajib diisi!', isError: true);
+      return;
+    }
+
+    // Prevent double tap
+    if (_isLoading) return;
+    
     setState(() => _isLoading = true);
 
-    // Ambil ID user yang sedang login
-    final user = await _authController.getUserLogin();
-    int idUser = user?.id ?? 0;
+    try {
+      // Ambil ID user yang sedang login
+      final user = await _authController.getUserLogin();
+      
+      if (user == null || user.id == null) {
+        throw Exception('User tidak ditemukan. Silakan login kembali.');
+      }
 
-    final barangBaru = BarangJualanModel(
-      namaBarang: _namaController.text,
-      harga: 'Rp ${_hargaController.text}',
-      kategori: _kategoriDipilih,
-      kondisi: _kondisiDipilih,
-      ukuran: _ukuranDipilih,
-      brand: _brandController.text,
-      bahan: _bahanController.text,
-      deskripsi: _deskripsiController.text,
-      lokasi: _lokasiController.text,
-      kontakPenjual: _kontakController.text,
-      pathGambar: _pathGambar!,
-      idPenjual: idUser,
-      tanggalUpload: DateTime.now().toIso8601String(),
-    );
+      int idUser = user.id!;
 
-    final berhasil = await _controller.tambahBarang(barangBaru);
+      // Buat object barang baru
+      final barangBaru = BarangJualanModel(
+        namaBarang: _namaController.text.trim(),
+        harga: 'Rp ${_hargaController.text.trim()}',
+        kategori: _kategoriDipilih,
+        kondisi: _kondisiDipilih,
+        ukuran: _ukuranDipilih,
+        brand: _brandController.text.trim(),
+        bahan: _bahanController.text.trim(),
+        deskripsi: _deskripsiController.text.trim(),
+        lokasi: _lokasiController.text.trim(),
+        kontakPenjual: _kontakController.text.trim(),
+        pathGambar: _pathGambar!,
+        idPenjual: idUser,
+        tanggalUpload: DateTime.now().toIso8601String(),
+      );
 
-    if (!mounted) return;
-    
-    setState(() => _isLoading = false);
+      // Simpan ke database
+      final berhasil = await _controller.tambahBarang(barangBaru);
 
-    if (berhasil) {
-      _tampilkanSnackBar('Barang berhasil ditambahkan!', isSuccess: true);
-      Navigator.pop(context, true);
-    } else {
-      _tampilkanSnackBar('Gagal menambahkan barang');
+      if (!mounted) return;
+
+      // Matikan loading SEBELUM navigasi
+      setState(() => _isLoading = false);
+
+      if (berhasil) {
+        _tampilkanSnackBar('Barang berhasil ditambahkan!', isSuccess: true);
+        
+        // Beri jeda sedikit agar snackbar terlihat
+        await Future.delayed(const Duration(milliseconds: 500));
+        
+        if (!mounted) return;
+        
+        // Kembali ke halaman sebelumnya (MyItemsPage) dengan sinyal true untuk refresh
+        Navigator.pop(context, true);
+      } else {
+        throw Exception('Gagal menyimpan barang ke database');
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        _tampilkanSnackBar('Error: ${e.toString()}', isError: true);
+      }
+      debugPrint('Error _simpanBarang: $e');
     }
   }
 
-  void _tampilkanSnackBar(String pesan, {bool isSuccess = false}) {
+  void _tampilkanSnackBar(String pesan, {bool isSuccess = false, bool isError = false}) {
+    if (!mounted) return;
+    
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(pesan),
-        backgroundColor: isSuccess ? Colors.green : Colors.red,
+        content: Row(
+          children: [
+            Icon(
+              isSuccess ? Icons.check_circle : (isError ? Icons.error : Icons.info),
+              color: Colors.white,
+              size: 20,
+            ),
+            const SizedBox(width: 12),
+            Expanded(child: Text(pesan)),
+          ],
+        ),
+        backgroundColor: isSuccess ? Colors.green : (isError ? Colors.red : Colors.orange),
         behavior: SnackBarBehavior.floating,
+        duration: Duration(seconds: isError ? 3 : 2),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+
+  InputDecoration _inputDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(color: textLight),
+      filled: true,
+      fillColor: Colors.white,
+      contentPadding: const EdgeInsets.all(16),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: borderColor),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: borderColor),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: primaryColor, width: 2),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Colors.red),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Colors.red, width: 2),
       ),
     );
   }
@@ -179,7 +258,34 @@ class _HalamanTambahBarangState extends State<HalamanTambahBarang> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: textDark),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            if (_namaController.text.isNotEmpty || _pathGambar != null) {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  title: const Text('Batalkan?'),
+                  content: const Text('Data yang sudah diisi akan hilang. Yakin ingin keluar?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Tidak'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context); // Close dialog
+                        Navigator.pop(context); // Close halaman tambah
+                      },
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                      child: const Text('Ya, Keluar'),
+                    ),
+                  ],
+                ),
+              );
+            } else {
+              Navigator.pop(context);
+            }
+          },
         ),
         title: const Text(
           'Jual Barang',
@@ -213,16 +319,47 @@ class _HalamanTambahBarangState extends State<HalamanTambahBarang> {
                           SizedBox(height: 8),
                           Text(
                             'Tambah Foto Barang',
-                            style: TextStyle(color: textLight),
+                            style: TextStyle(color: textLight, fontWeight: FontWeight.w600),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'Tap untuk memilih foto',
+                            style: TextStyle(color: textLight, fontSize: 12),
                           ),
                         ],
                       )
-                    : ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.file(
-                          File(_pathGambar!),
-                          fit: BoxFit.cover,
-                        ),
+                    : Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.file(
+                              File(_pathGambar!),
+                              width: double.infinity,
+                              height: double.infinity,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                          Positioned(
+                            top: 8,
+                            right: 8,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.2),
+                                    blurRadius: 8,
+                                  ),
+                                ],
+                              ),
+                              child: IconButton(
+                                icon: const Icon(Icons.close, color: Colors.white, size: 20),
+                                onPressed: () => setState(() => _pathGambar = null),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
               ),
             ),
@@ -233,7 +370,7 @@ class _HalamanTambahBarangState extends State<HalamanTambahBarang> {
             TextFormField(
               controller: _namaController,
               decoration: _inputDecoration('Nama Barang'),
-              validator: (v) => v!.isEmpty ? 'Wajib diisi' : null,
+              validator: (v) => v!.trim().isEmpty ? 'Wajib diisi' : null,
             ),
 
             const SizedBox(height: 16),
@@ -243,7 +380,11 @@ class _HalamanTambahBarangState extends State<HalamanTambahBarang> {
               controller: _hargaController,
               keyboardType: TextInputType.number,
               decoration: _inputDecoration('Harga (tanpa Rp)'),
-              validator: (v) => v!.isEmpty ? 'Wajib diisi' : null,
+              validator: (v) {
+                if (v!.trim().isEmpty) return 'Wajib diisi';
+                if (int.tryParse(v.trim()) == null) return 'Harus berupa angka';
+                return null;
+              },
             ),
 
             const SizedBox(height: 16),
@@ -262,7 +403,7 @@ class _HalamanTambahBarangState extends State<HalamanTambahBarang> {
             TextFormField(
               controller: _brandController,
               decoration: _inputDecoration('Brand'),
-              validator: (v) => v!.isEmpty ? 'Wajib diisi' : null,
+              validator: (v) => v!.trim().isEmpty ? 'Wajib diisi' : null,
             ),
 
             const SizedBox(height: 16),
@@ -291,7 +432,7 @@ class _HalamanTambahBarangState extends State<HalamanTambahBarang> {
             TextFormField(
               controller: _bahanController,
               decoration: _inputDecoration('Bahan'),
-              validator: (v) => v!.isEmpty ? 'Wajib diisi' : null,
+              validator: (v) => v!.trim().isEmpty ? 'Wajib diisi' : null,
             ),
 
             const SizedBox(height: 16),
@@ -300,7 +441,7 @@ class _HalamanTambahBarangState extends State<HalamanTambahBarang> {
             TextFormField(
               controller: _lokasiController,
               decoration: _inputDecoration('Lokasi (Kota)'),
-              validator: (v) => v!.isEmpty ? 'Wajib diisi' : null,
+              validator: (v) => v!.trim().isEmpty ? 'Wajib diisi' : null,
             ),
 
             const SizedBox(height: 16),
@@ -310,7 +451,7 @@ class _HalamanTambahBarangState extends State<HalamanTambahBarang> {
               controller: _kontakController,
               keyboardType: TextInputType.phone,
               decoration: _inputDecoration('Nomor Kontak'),
-              validator: (v) => v!.isEmpty ? 'Wajib diisi' : null,
+              validator: (v) => v!.trim().isEmpty ? 'Wajib diisi' : null,
             ),
 
             const SizedBox(height: 16),
@@ -320,7 +461,7 @@ class _HalamanTambahBarangState extends State<HalamanTambahBarang> {
               controller: _deskripsiController,
               maxLines: 4,
               decoration: _inputDecoration('Deskripsi'),
-              validator: (v) => v!.isEmpty ? 'Wajib diisi' : null,
+              validator: (v) => v!.trim().isEmpty ? 'Wajib diisi' : null,
             ),
 
             const SizedBox(height: 24),
@@ -337,6 +478,7 @@ class _HalamanTambahBarangState extends State<HalamanTambahBarang> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   elevation: 0,
+                  disabledBackgroundColor: primaryColor.withValues(alpha: 0.5),
                 ),
                 child: _isLoading
                     ? const SizedBox(
@@ -356,34 +498,10 @@ class _HalamanTambahBarangState extends State<HalamanTambahBarang> {
                       ),
               ),
             ),
+            
+            const SizedBox(height: 16),
           ],
         ),
-      ),
-    );
-  }
-
-  InputDecoration _inputDecoration(String label) {
-    return InputDecoration(
-      labelText: label,
-      labelStyle: const TextStyle(color: textLight),
-      filled: true,
-      fillColor: Colors.white,
-      contentPadding: const EdgeInsets.all(16),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: borderColor),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: borderColor),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: primaryColor, width: 2),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Colors.red),
       ),
     );
   }

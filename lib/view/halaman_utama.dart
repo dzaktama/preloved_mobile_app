@@ -1,7 +1,10 @@
+// Path: lib/view/halaman_utama.dart
 import 'package:flutter/material.dart';
 import '../controller/home_controller.dart';
 import '../controller/controller_cart.dart';
 import '../controller/user_controller.dart';
+import '../controller/auth_controller.dart';
+import '../controller/chat_controller.dart'; // Import Chat Controller
 import '../model/product_model.dart';
 import '../model/userModel.dart';
 import 'package:preloved_mobile_app/view/profil/profile.dart';
@@ -9,6 +12,7 @@ import 'package:preloved_mobile_app/view/profil/seller_profil_page.dart';
 import 'package:preloved_mobile_app/view/cart.dart';
 import 'package:preloved_mobile_app/view/like.dart';
 import 'package:preloved_mobile_app/view/transaksi/halaman_checkout.dart';
+import 'package:preloved_mobile_app/view/chat/chat_room_page.dart'; // Import Chat Page
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -21,6 +25,7 @@ class _HomePageState extends State<HomePage> {
   final HomeController _controller = HomeController();
   final ControllerCart _controllerCart = ControllerCart();
   final UserController _userController = UserController();
+  final AuthController _authController = AuthController();
   final TextEditingController _searchController = TextEditingController();
 
   Set<String> favoriteProducts = {};
@@ -97,6 +102,44 @@ class _HomePageState extends State<HomePage> {
         duration: const Duration(seconds: 2),
       ),
     );
+  }
+
+  // Logic handle chat
+  void _handleChatWithSeller(ProductModel product) async {
+    final currentUser = await _authController.getUserLogin();
+    if (currentUser == null || currentUser.id == null) {
+      _showSnackBar('Silakan login terlebih dahulu', Icons.login);
+      return;
+    }
+
+    final seller = await _getProductSeller(product);
+    if (seller == null) {
+       _showSnackBar('Penjual tidak ditemukan', Icons.error);
+       return;
+    }
+
+    if (seller.id == currentUser.id) {
+      _showSnackBar('Anda tidak bisa chat dengan diri sendiri', Icons.person);
+      return;
+    }
+
+    // Simulasi Room ID (gunakan logika backend yang benar di production)
+    int simulatedRoomId = (currentUser.id! + seller.id!).abs(); 
+
+    if (mounted) {
+      Navigator.pop(context); // Tutup modal
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ChatRoomPage(
+            chatRoomId: simulatedRoomId, 
+            otherUserId: seller.id!,
+            otherUserName: seller.uName ?? 'Seller',
+            otherUserPhoto: null, // FIX: Diganti null karena uProfile tidak ada di model
+          ),
+        ),
+      );
+    }
   }
 
   void _showFilterSheet() {
@@ -831,7 +874,7 @@ class _HomePageState extends State<HomePage> {
                           ),
                           const SizedBox(height: 20),
                           
-                          // ========== SELLER CARD - NEW FEATURE ==========
+                          // ========== SELLER CARD ==========
                           FutureBuilder<UserModel?>(
                             future: _getProductSeller(product),
                             builder: (context, snapshot) {
@@ -982,6 +1025,8 @@ class _HomePageState extends State<HomePage> {
                         ],
                       ),
                     ),
+                    
+                    // --- BAGIAN TOMBOL ACTION (ADD CART, CHAT, BUY NOW) ---
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -996,6 +1041,26 @@ class _HomePageState extends State<HomePage> {
                       ),
                       child: Row(
                         children: [
+                          // TOMBOL CHAT (BARU)
+                          Container(
+                            margin: const EdgeInsets.only(right: 12),
+                            height: 52,
+                            width: 52,
+                            child: OutlinedButton(
+                              onPressed: () => _handleChatWithSeller(product),
+                              style: OutlinedButton.styleFrom(
+                                padding: EdgeInsets.zero,
+                                foregroundColor: primaryColor,
+                                side: const BorderSide(color: primaryColor, width: 2),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: const Icon(Icons.chat_bubble_outline, size: 24),
+                            ),
+                          ),
+                          
+                          // TOMBOL CART
                           Expanded(
                             child: SizedBox(
                               height: 52,
@@ -1006,10 +1071,10 @@ class _HomePageState extends State<HomePage> {
                                 },
                                 icon: const Icon(Icons.shopping_cart_outlined, size: 20),
                                 label: const Text(
-                                  'Add to Cart',
+                                  'Cart',
                                   style: TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
                                 style: OutlinedButton.styleFrom(
@@ -1023,6 +1088,8 @@ class _HomePageState extends State<HomePage> {
                             ),
                           ),
                           const SizedBox(width: 12),
+                          
+                          // TOMBOL BUY NOW
                           Expanded(
                             child: SizedBox(
                               height: 52,
@@ -1050,8 +1117,8 @@ class _HomePageState extends State<HomePage> {
                                 label: const Text(
                                   'Buy Now',
                                   style: TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
                                 style: ElevatedButton.styleFrom(
