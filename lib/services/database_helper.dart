@@ -19,7 +19,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 2, // UPDATED VERSION untuk migration
+      version: 3, // UPDATED VERSION untuk migration (added session.token)
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
@@ -39,6 +39,14 @@ class DatabaseHelper {
       
       // Create review table
       await _createReviewTable(db);
+    }
+    if (oldVersion < 3) {
+      // Add token column to session table to store API auth token
+      try {
+        await db.execute('ALTER TABLE session ADD COLUMN token TEXT');
+      } catch (_) {
+        // ignore if column already exists
+      }
     }
   }
 
@@ -75,6 +83,7 @@ class DatabaseHelper {
         id $idType,
         is_login $intType DEFAULT 0,
         user_id $intType,
+        token TEXT,
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
       )
     ''');
