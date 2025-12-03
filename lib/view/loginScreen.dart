@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../controller/auth_controller.dart';
 import 'registerScreen.dart';
-
 import 'package:preloved_mobile_app/view/main_navigation.dart';
 
 class LoginPage extends StatefulWidget {
@@ -36,35 +35,83 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _handleLogin() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() => _isLoading = true);
+    if (!_formKey.currentState!.validate()) return;
 
-      await Future.delayed(const Duration(milliseconds: 1500));
+    setState(() => _isLoading = true);
 
-      if (!mounted) return;
-
+    try {
+      print('🔵 LoginPage: Attempting login...');
       bool berhasil = await _authController.login(
-        _emailController.text, 
-        _passwordController.text
+        _emailController.text.trim(),
+        _passwordController.text,
       );
+      print('🔵 LoginPage: Login result: $berhasil');
 
       if (!mounted) return;
+
       setState(() => _isLoading = false);
 
       if (berhasil) {
+        // Login berhasil, navigasi ke halaman utama
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const MainNavigation()),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Email atau password salah, coba cek lagi'),
-            backgroundColor: Colors.red,
+          MaterialPageRoute(
+            builder: (context) => const MainNavigation(),
           ),
         );
+      } else {
+        // Login gagal
+        _showErrorSnackbar(
+          'Login gagal! Cek console untuk detail error.',
+        );
       }
+    } catch (e) {
+      print('❌ LoginPage: Exception: $e');
+      if (!mounted) return;
+      
+      setState(() => _isLoading = false);
+      _showErrorSnackbar('Terjadi kesalahan: $e');
     }
+  }
+
+  void _showErrorSnackbar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.error_outline, color: Colors.white),
+            const SizedBox(width: 12),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: Colors.red[700],
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
+  void _showSuccessSnackbar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle_outline, color: Colors.white),
+            const SizedBox(width: 12),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: Colors.green[700],
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        duration: const Duration(seconds: 3),
+      ),
+    );
   }
 
   @override
@@ -120,7 +167,7 @@ class _LoginPageState extends State<LoginPage> {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 16,
-                    color: textLight.withValues(alpha: 0.8), 
+                    color: textLight.withValues(alpha: 0.8),
                   ),
                 ),
                 const SizedBox(height: 40),
@@ -138,11 +185,11 @@ class _LoginPageState extends State<LoginPage> {
                           Icons.email_outlined,
                         ),
                         validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter your email';
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Email tidak boleh kosong';
                           }
                           if (!value.contains('@')) {
-                            return 'Please enter a valid email';
+                            return 'Format email tidak valid';
                           }
                           return null;
                         },
@@ -173,10 +220,10 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
-                            return 'Please enter your password';
+                            return 'Password tidak boleh kosong';
                           }
                           if (value.length < 6) {
-                            return 'Password must be at least 6 characters';
+                            return 'Password minimal 6 karakter';
                           }
                           return null;
                         },
@@ -203,7 +250,7 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                             onChanged: (value) {
                               setState(() {
-                                _rememberMe = value!;
+                                _rememberMe = value ?? false;
                               });
                             },
                           ),
@@ -216,7 +263,14 @@ class _LoginPageState extends State<LoginPage> {
                       ],
                     ),
                     TextButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        // TODO: Implementasi forgot password
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Fitur lupa password belum tersedia'),
+                          ),
+                        );
+                      },
                       child: const Text(
                         'Forgot Password?',
                         style: TextStyle(
@@ -241,6 +295,7 @@ class _LoginPageState extends State<LoginPage> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
+                      disabledBackgroundColor: primaryColor.withValues(alpha: 0.6),
                     ),
                     child: _isLoading
                         ? const SizedBox(
@@ -290,7 +345,13 @@ class _LoginPageState extends State<LoginPage> {
                         icon: Icons.g_mobiledata,
                         label: 'Google',
                         iconColor: Colors.red,
-                        onTap: () {},
+                        onTap: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Login dengan Google belum tersedia'),
+                            ),
+                          );
+                        },
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -299,7 +360,13 @@ class _LoginPageState extends State<LoginPage> {
                         icon: Icons.facebook,
                         label: 'Facebook',
                         iconColor: Colors.blue,
-                        onTap: () {},
+                        onTap: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Login dengan Facebook belum tersedia'),
+                            ),
+                          );
+                        },
                       ),
                     ),
                   ],

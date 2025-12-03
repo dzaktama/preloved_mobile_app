@@ -1,151 +1,14 @@
-// lib/services/api_service.dart
+// lib/services/layanan_api.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../model/product_model.dart';
 
 class ApiService {
-  // Base URL API (updated to new service)
   static const String baseUrl = 'https://preloved-data-api.vercel.app';
-
-  // Common endpoints (following the provided API)
-  // Auth endpoints (register/login/me/updateprofile/updatepassword)
   static const String authEndpoint = '/api/auth';
-  // Products endpoints
   static const String productsEndpoint = '/api/products';
-  // Address endpoint (if still used elsewhere)
-  static const String alamatEndpoint = '/api/alamat';
 
-  // ==================== GET ALL PRODUCTS ====================
-  Future<Map<String, dynamic>> getAllProducts() async {
-    try {
-      final response = await http
-          .get(Uri.parse('$baseUrl$productsEndpoint'), headers: {
-        'Content-Type': 'application/json',
-      }).timeout(
-        const Duration(seconds: 30),
-        onTimeout: () {
-          throw Exception('Connection timeout. Please try again.');
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final decoded = json.decode(response.body);
-
-        List<ProductModel> products = [];
-
-        // Support API returning either a raw array or an object with a data field
-        if (decoded is List) {
-          products = decoded.map<ProductModel>((e) => ProductModel.fromJson(e)).toList();
-        } else if (decoded is Map<String, dynamic>) {
-          if (decoded.containsKey('data')) {
-            final list = decoded['data'];
-            if (list is List) {
-              products = list.map<ProductModel>((e) => ProductModel.fromJson(e)).toList();
-            }
-          } else if (decoded.containsKey('data_barang')) {
-            final list = decoded['data_barang'];
-            if (list is List) {
-              products = list.map<ProductModel>((e) => ProductModel.fromJson(e)).toList();
-            }
-          }
-        }
-
-        return {
-          'success': true,
-          'message': 'Products loaded successfully',
-          'data': products,
-        };
-      } else if (response.statusCode == 404) {
-        return {
-          'success': false,
-          'message': 'Products not found',
-          'data': <ProductModel>[],
-        };
-      } else {
-        return {
-          'success': false,
-          'message': 'Failed to load products. Status code: ${response.statusCode}',
-          'data': <ProductModel>[],
-        };
-      }
-    } on http.ClientException catch (e) {
-      return {
-        'success': false,
-        'message': 'Network error: ${e.message}',
-        'data': <ProductModel>[],
-      };
-    } catch (e) {
-      return {
-        'success': false,
-        'message': 'An error occurred: $e',
-        'data': <ProductModel>[],
-      };
-    }
-  }
-
-  // ==================== AUTH / USERS ====================
-  // Register user: POST /api/auth/register
-  Future<Map<String, dynamic>> registerUser(Map<String, dynamic> body) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl$authEndpoint/register'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode(body),
-      ).timeout(const Duration(seconds: 30));
-      final decoded = _tryDecode(response.body);
-      if (response.statusCode == 201 || response.statusCode == 200) {
-        return {
-          'success': true,
-          'message': 'User created',
-          'statusCode': response.statusCode,
-          'data': decoded,
-          'raw': response.body,
-        };
-      }
-
-      return {
-        'success': false,
-        'message': 'Failed to create user',
-        'statusCode': response.statusCode,
-        'data': decoded,
-        'raw': response.body,
-      };
-    } catch (e) {
-      return {'success': false, 'message': '$e', 'data': null};
-    }
-  }
-
-  // Login user: POST /api/auth/login
-  Future<Map<String, dynamic>> loginUser(Map<String, dynamic> body) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl$authEndpoint/login'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode(body),
-      ).timeout(const Duration(seconds: 30));
-      final decoded = _tryDecode(response.body);
-      if (response.statusCode == 200) {
-        return {
-          'success': true,
-          'message': 'Login successful',
-          'statusCode': response.statusCode,
-          'data': decoded,
-          'raw': response.body,
-        };
-      }
-
-      return {
-        'success': false,
-        'message': 'Login failed',
-        'statusCode': response.statusCode,
-        'data': decoded,
-        'raw': response.body,
-      };
-    } catch (e) {
-      return {'success': false, 'message': '$e', 'data': null};
-    }
-  }
-
+  // Helper untuk decode response
   dynamic _tryDecode(String body) {
     try {
       return json.decode(body);
@@ -154,175 +17,529 @@ class ApiService {
     }
   }
 
-  // Get profile (private): GET /api/auth/me
-  Future<Map<String, dynamic>> getProfile(String token) async {
+  // ==================== AUTH ENDPOINTS ====================
+  
+  /// Register user: POST /api/auth/register
+  /// Body: { name, email, password, phone }
+  Future<Map<String, dynamic>> registerUser(Map<String, dynamic> body) async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl$authEndpoint/me'), headers: {
-        'Content-Type': 'application/json',
-        if (token.isNotEmpty) 'Authorization': 'Bearer $token',
-      }).timeout(const Duration(seconds: 30));
-
-      if (response.statusCode == 200) {
-        return {'success': true, 'message': 'Profile loaded', 'data': json.decode(response.body)};
-      }
-      return {'success': false, 'message': 'Failed to load profile', 'data': null};
-    } catch (e) {
-      return {'success': false, 'message': '$e', 'data': null};
-    }
-  }
-
-  // Update profile (private): PUT /api/auth/updateprofile
-  Future<Map<String, dynamic>> updateProfile(String token, Map<String, dynamic> body) async {
-    try {
-      final response = await http.put(Uri.parse('$baseUrl$authEndpoint/updateprofile'), headers: {
-        'Content-Type': 'application/json',
-        if (token.isNotEmpty) 'Authorization': 'Bearer $token',
-      }, body: json.encode(body)).timeout(const Duration(seconds: 30));
-
-      if (response.statusCode == 200) {
-        return {'success': true, 'message': 'Profile updated', 'data': json.decode(response.body)};
-      }
-      return {'success': false, 'message': 'Failed to update profile', 'data': null};
-    } catch (e) {
-      return {'success': false, 'message': '$e', 'data': null};
-    }
-  }
-
-  // Update password (private): PUT /api/auth/updatepassword
-  Future<Map<String, dynamic>> updatePassword(String token, Map<String, dynamic> body) async {
-    try {
-      final response = await http.put(Uri.parse('$baseUrl$authEndpoint/updatepassword'), headers: {
-        'Content-Type': 'application/json',
-        if (token.isNotEmpty) 'Authorization': 'Bearer $token',
-      }, body: json.encode(body)).timeout(const Duration(seconds: 30));
-
-      if (response.statusCode == 200) {
-        return {'success': true, 'message': 'Password updated', 'data': json.decode(response.body)};
-      }
-      return {'success': false, 'message': 'Failed to update password', 'data': null};
-    } catch (e) {
-      return {'success': false, 'message': '$e', 'data': null};
-    }
-  }
-
-  // ==================== BARANG (PRODUCT) ====================
-  Future<Map<String, dynamic>> getBarangs() async {
-    return await getAllProducts();
-  }
-
-  Future<Map<String, dynamic>> getBarangById(String id) async {
-    try {
-      final response = await http.get(Uri.parse('$baseUrl$productsEndpoint/$id'), headers: {
-        'Content-Type': 'application/json',
-      }).timeout(const Duration(seconds: 30));
-
-      if (response.statusCode == 200) {
-        final decoded = json.decode(response.body);
-        return {'success': true, 'message': 'Barang loaded', 'data': ProductModel.fromJson(decoded)};
-      }
-
-      return {'success': false, 'message': 'Barang not found', 'data': null};
-    } catch (e) {
-      return {'success': false, 'message': '$e', 'data': null};
-    }
-  }
-
-  Future<Map<String, dynamic>> createBarang(Map<String, dynamic> body) async {
-    try {
+      print('═══════════════════════════════════════');
+      print('📤 REGISTER REQUEST');
+      print('URL: $baseUrl$authEndpoint/register');
+      print('Body: ${json.encode(body)}');
+      
       final response = await http.post(
-        Uri.parse('$baseUrl$productsEndpoint'),
+        Uri.parse('$baseUrl$authEndpoint/register'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode(body),
       ).timeout(const Duration(seconds: 30));
+
+      print('📥 REGISTER RESPONSE');
+      print('Status Code: ${response.statusCode}');
+      print('Response Body: ${response.body}');
+      print('═══════════════════════════════════════');
+
+      final decoded = _tryDecode(response.body);
 
       if (response.statusCode == 201 || response.statusCode == 200) {
-        return {'success': true, 'message': 'Barang created', 'data': json.decode(response.body)};
+        return {
+          'success': true,
+          'message': decoded is Map ? (decoded['message'] ?? 'User registered successfully') : 'User registered successfully',
+          'statusCode': response.statusCode,
+          'data': decoded is Map ? (decoded['user'] ?? decoded['data'] ?? decoded) : decoded,
+          'raw': response.body,
+        };
       }
-      return {'success': false, 'message': 'Failed to create barang', 'data': null};
+
+      // Handle validation errors
+      String errorMessage = 'Registration failed';
+      if (decoded is Map) {
+        if (decoded.containsKey('errors') && decoded['errors'] is List) {
+          errorMessage = (decoded['errors'] as List).join(', ');
+        } else if (decoded.containsKey('message')) {
+          errorMessage = decoded['message'];
+        } else if (decoded.containsKey('error')) {
+          errorMessage = decoded['error'];
+        }
+      }
+
+      return {
+        'success': false,
+        'message': errorMessage,
+        'statusCode': response.statusCode,
+        'data': null,
+        'raw': response.body,
+      };
     } catch (e) {
-      return {'success': false, 'message': '$e', 'data': null};
+      print('❌ REGISTER ERROR: $e');
+      return {
+        'success': false,
+        'message': 'Connection error: $e',
+        'data': null
+      };
     }
   }
 
-  Future<Map<String, dynamic>> updateBarang(String id, Map<String, dynamic> body) async {
+  /// Login user: POST /api/auth/login
+  /// Body: { email, password }
+  /// Returns: { success, token, user }
+  Future<Map<String, dynamic>> loginUser(Map<String, dynamic> body) async {
     try {
+      print('═══════════════════════════════════════');
+      print('📤 LOGIN REQUEST');
+      print('URL: $baseUrl$authEndpoint/login');
+      print('Body: ${json.encode(body)}');
+      
+      final response = await http.post(
+        Uri.parse('$baseUrl$authEndpoint/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(body),
+      ).timeout(const Duration(seconds: 30));
+
+      print('📥 LOGIN RESPONSE');
+      print('Status Code: ${response.statusCode}');
+      print('Response Body: ${response.body}');
+      print('═══════════════════════════════════════');
+
+      final decoded = _tryDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'message': decoded is Map ? (decoded['message'] ?? 'Login successful') : 'Login successful',
+          'statusCode': response.statusCode,
+          'data': decoded, // Contains token and user data
+          'raw': response.body,
+        };
+      }
+
+      return {
+        'success': false,
+        'message': decoded is Map ? (decoded['message'] ?? decoded['error'] ?? 'Login failed') : 'Login failed',
+        'statusCode': response.statusCode,
+        'data': null,
+        'raw': response.body,
+      };
+    } catch (e) {
+      print('❌ LOGIN ERROR: $e');
+      return {
+        'success': false,
+        'message': 'Connection error: $e',
+        'data': null
+      };
+    }
+  }
+
+  /// Get profile: GET /api/auth/me (Private)
+  /// Requires: Authorization header with Bearer token
+  Future<Map<String, dynamic>> getProfile(String token) async {
+    try {
+      print('API: Get profile with token: ${token.substring(0, 20)}...');
+      
+      final response = await http.get(
+        Uri.parse('$baseUrl$authEndpoint/me'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 30));
+
+      final decoded = _tryDecode(response.body);
+      print('API: Get profile response -> status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'message': 'Profile loaded',
+          'data': decoded['user'] ?? decoded['data'] ?? decoded,
+        };
+      }
+
+      return {
+        'success': false,
+        'message': decoded['message'] ?? 'Failed to load profile',
+        'data': null
+      };
+    } catch (e) {
+      print('API: Get profile error -> $e');
+      return {
+        'success': false,
+        'message': 'Connection error: $e',
+        'data': null
+      };
+    }
+  }
+
+  /// Update profile: PUT /api/auth/updateprofile (Private)
+  /// Body: { name?, phone?, address?, foto_profil? }
+  Future<Map<String, dynamic>> updateProfile(String token, Map<String, dynamic> body) async {
+    try {
+      print('API: Update profile -> ${json.encode(body)}');
+      
       final response = await http.put(
+        Uri.parse('$baseUrl$authEndpoint/updateprofile'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: json.encode(body),
+      ).timeout(const Duration(seconds: 30));
+
+      final decoded = _tryDecode(response.body);
+      print('API: Update profile response -> status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'message': decoded['message'] ?? 'Profile updated',
+          'data': decoded['user'] ?? decoded['data'] ?? decoded,
+        };
+      }
+
+      return {
+        'success': false,
+        'message': decoded['message'] ?? 'Failed to update profile',
+        'data': null
+      };
+    } catch (e) {
+      print('API: Update profile error -> $e');
+      return {
+        'success': false,
+        'message': 'Connection error: $e',
+        'data': null
+      };
+    }
+  }
+
+  /// Update password: PUT /api/auth/updatepassword (Private)
+  /// Body: { currentPassword, newPassword }
+  Future<Map<String, dynamic>> updatePassword(String token, Map<String, dynamic> body) async {
+    try {
+      print('API: Update password');
+      
+      final response = await http.put(
+        Uri.parse('$baseUrl$authEndpoint/updatepassword'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: json.encode(body),
+      ).timeout(const Duration(seconds: 30));
+
+      final decoded = _tryDecode(response.body);
+      print('API: Update password response -> status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'message': decoded['message'] ?? 'Password updated',
+          'data': decoded,
+        };
+      }
+
+      return {
+        'success': false,
+        'message': decoded['message'] ?? 'Failed to update password',
+        'data': null
+      };
+    } catch (e) {
+      print('API: Update password error -> $e');
+      return {
+        'success': false,
+        'message': 'Connection error: $e',
+        'data': null
+      };
+    }
+  }
+
+  // ==================== PRODUCTS ENDPOINTS ====================
+
+  /// Get all products: GET /api/products
+  Future<Map<String, dynamic>> getAllProducts() async {
+    try {
+      print('API: Get all products');
+      
+      final response = await http.get(
+        Uri.parse('$baseUrl$productsEndpoint'),
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(const Duration(seconds: 30));
+
+      print('API: Get all products response -> status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final decoded = _tryDecode(response.body);
+        List<ProductModel> products = [];
+
+        if (decoded is List) {
+          products = decoded.map<ProductModel>((e) => ProductModel.fromJson(e)).toList();
+        } else if (decoded is Map<String, dynamic>) {
+          final data = decoded['products'] ?? decoded['data'] ?? decoded['data_barang'];
+          if (data is List) {
+            products = data.map<ProductModel>((e) => ProductModel.fromJson(e)).toList();
+          }
+        }
+
+        return {
+          'success': true,
+          'message': 'Products loaded successfully',
+          'data': products,
+        };
+      }
+
+      return {
+        'success': false,
+        'message': 'Failed to load products',
+        'data': <ProductModel>[],
+      };
+    } catch (e) {
+      print('API: Get all products error -> $e');
+      return {
+        'success': false,
+        'message': 'Connection error: $e',
+        'data': <ProductModel>[],
+      };
+    }
+  }
+
+  /// Get product by ID: GET /api/products/:id
+  Future<Map<String, dynamic>> getProductById(String id) async {
+    try {
+      print('API: Get product by ID -> $id');
+      
+      final response = await http.get(
         Uri.parse('$baseUrl$productsEndpoint/$id'),
         headers: {'Content-Type': 'application/json'},
-        body: json.encode(body),
       ).timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
-        return {'success': true, 'message': 'Barang updated', 'data': json.decode(response.body)};
+        final decoded = _tryDecode(response.body);
+        final productData = decoded['product'] ?? decoded['data'] ?? decoded;
+        
+        return {
+          'success': true,
+          'message': 'Product loaded',
+          'data': ProductModel.fromJson(productData),
+        };
       }
 
-      return {'success': false, 'message': 'Failed to update barang', 'data': null};
+      return {
+        'success': false,
+        'message': 'Product not found',
+        'data': null
+      };
     } catch (e) {
-      return {'success': false, 'message': '$e', 'data': null};
+      print('API: Get product error -> $e');
+      return {
+        'success': false,
+        'message': 'Connection error: $e',
+        'data': null
+      };
     }
   }
 
-  Future<Map<String, dynamic>> deleteBarang(String id) async {
+  /// Get my products: GET /api/products/my/products (Private)
+  Future<Map<String, dynamic>> getMyProducts(String token) async {
     try {
-      final response = await http.delete(Uri.parse('$baseUrl$productsEndpoint/$id')).timeout(const Duration(seconds: 30));
-
-      if (response.statusCode == 200 || response.statusCode == 204) {
-        return {'success': true, 'message': 'Barang deleted', 'data': null};
-      }
-
-      return {'success': false, 'message': 'Failed to delete barang', 'data': null};
-    } catch (e) {
-      return {'success': false, 'message': '$e', 'data': null};
-    }
-  }
-
-  // ==================== ALAMAT ====================
-  Future<Map<String, dynamic>> getAlamat() async {
-    try {
-      final response = await http.get(Uri.parse('$baseUrl$alamatEndpoint'), headers: {
-        'Content-Type': 'application/json',
-      }).timeout(const Duration(seconds: 30));
+      print('API: Get my products');
+      
+      final response = await http.get(
+        Uri.parse('$baseUrl$productsEndpoint/my/products'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
-        return {'success': true, 'message': 'Alamat loaded', 'data': json.decode(response.body)};
+        final decoded = _tryDecode(response.body);
+        List<ProductModel> products = [];
+
+        final data = decoded['products'] ?? decoded['data'];
+        if (data is List) {
+          products = data.map<ProductModel>((e) => ProductModel.fromJson(e)).toList();
+        }
+
+        return {
+          'success': true,
+          'message': 'My products loaded',
+          'data': products,
+        };
       }
-      return {'success': false, 'message': 'Failed to load alamat', 'data': []};
+
+      return {
+        'success': false,
+        'message': 'Failed to load products',
+        'data': <ProductModel>[],
+      };
     } catch (e) {
-      return {'success': false, 'message': '$e', 'data': []};
+      print('API: Get my products error -> $e');
+      return {
+        'success': false,
+        'message': 'Connection error: $e',
+        'data': <ProductModel>[],
+      };
     }
   }
 
-  Future<Map<String, dynamic>> updateAlamat(String id, Map<String, dynamic> body) async {
+  /// Get user products: GET /api/products/user/:userId
+  Future<Map<String, dynamic>> getUserProducts(String userId) async {
     try {
-      final response = await http.put(
-        Uri.parse('$baseUrl$alamatEndpoint/$id'),
+      print('API: Get user products -> $userId');
+      
+      final response = await http.get(
+        Uri.parse('$baseUrl$productsEndpoint/user/$userId'),
         headers: {'Content-Type': 'application/json'},
-        body: json.encode(body),
       ).timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
-        return {'success': true, 'message': 'Alamat updated', 'data': json.decode(response.body)};
+        final decoded = _tryDecode(response.body);
+        List<ProductModel> products = [];
+
+        final data = decoded['products'] ?? decoded['data'];
+        if (data is List) {
+          products = data.map<ProductModel>((e) => ProductModel.fromJson(e)).toList();
+        }
+
+        return {
+          'success': true,
+          'message': 'User products loaded',
+          'data': products,
+        };
       }
-      return {'success': false, 'message': 'Failed to update alamat', 'data': null};
+
+      return {
+        'success': false,
+        'message': 'Failed to load products',
+        'data': <ProductModel>[],
+      };
     } catch (e) {
-      return {'success': false, 'message': '$e', 'data': null};
+      print('API: Get user products error -> $e');
+      return {
+        'success': false,
+        'message': 'Connection error: $e',
+        'data': <ProductModel>[],
+      };
     }
   }
 
-  Future<Map<String, dynamic>> deleteAlamat(String id) async {
+  /// Create product: POST /api/products (Private)
+  Future<Map<String, dynamic>> createProduct(String token, Map<String, dynamic> body) async {
     try {
-      final response = await http.delete(Uri.parse('$baseUrl$alamatEndpoint/$id')).timeout(const Duration(seconds: 30));
+      print('API: Create product -> ${json.encode(body)}');
+      
+      final response = await http.post(
+        Uri.parse('$baseUrl$productsEndpoint'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: json.encode(body),
+      ).timeout(const Duration(seconds: 30));
+
+      final decoded = _tryDecode(response.body);
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        return {
+          'success': true,
+          'message': decoded['message'] ?? 'Product created',
+          'data': decoded['product'] ?? decoded['data'] ?? decoded,
+        };
+      }
+
+      return {
+        'success': false,
+        'message': decoded['message'] ?? 'Failed to create product',
+        'data': null
+      };
+    } catch (e) {
+      print('API: Create product error -> $e');
+      return {
+        'success': false,
+        'message': 'Connection error: $e',
+        'data': null
+      };
+    }
+  }
+
+  /// Update product: PUT /api/products/:id (Private)
+  Future<Map<String, dynamic>> updateProduct(String token, String id, Map<String, dynamic> body) async {
+    try {
+      print('API: Update product $id -> ${json.encode(body)}');
+      
+      final response = await http.put(
+        Uri.parse('$baseUrl$productsEndpoint/$id'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: json.encode(body),
+      ).timeout(const Duration(seconds: 30));
+
+      final decoded = _tryDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'message': decoded['message'] ?? 'Product updated',
+          'data': decoded['product'] ?? decoded['data'] ?? decoded,
+        };
+      }
+
+      return {
+        'success': false,
+        'message': decoded['message'] ?? 'Failed to update product',
+        'data': null
+      };
+    } catch (e) {
+      print('API: Update product error -> $e');
+      return {
+        'success': false,
+        'message': 'Connection error: $e',
+        'data': null
+      };
+    }
+  }
+
+  /// Delete product: DELETE /api/products/:id (Private)
+  Future<Map<String, dynamic>> deleteProduct(String token, String id) async {
+    try {
+      print('API: Delete product -> $id');
+      
+      final response = await http.delete(
+        Uri.parse('$baseUrl$productsEndpoint/$id'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200 || response.statusCode == 204) {
-        return {'success': true, 'message': 'Alamat deleted', 'data': null};
+        final decoded = response.statusCode == 200 ? _tryDecode(response.body) : {};
+        return {
+          'success': true,
+          'message': decoded['message'] ?? 'Product deleted',
+          'data': null
+        };
       }
-      return {'success': false, 'message': 'Failed to delete alamat', 'data': null};
+
+      return {
+        'success': false,
+        'message': 'Failed to delete product',
+        'data': null
+      };
     } catch (e) {
-      return {'success': false, 'message': '$e', 'data': null};
+      print('API: Delete product error -> $e');
+      return {
+        'success': false,
+        'message': 'Connection error: $e',
+        'data': null
+      };
     }
   }
 
-  // ==================== SEARCH PRODUCTS ====================
+  // ==================== UTILITY METHODS ====================
+
+  /// Search products locally
   Future<Map<String, dynamic>> searchProducts(String query) async {
     try {
       final result = await getAllProducts();
@@ -330,7 +547,6 @@ class ApiService {
       if (result['success']) {
         List<ProductModel> allProducts = result['data'];
         
-        // Filter products based on query
         List<ProductModel> filteredProducts = allProducts.where((product) {
           final namaBarang = product.namaBarang.toLowerCase();
           final brand = product.brand.toLowerCase();
@@ -359,7 +575,7 @@ class ApiService {
     }
   }
 
-  // ==================== FILTER BY CATEGORY ====================
+  /// Filter products by category
   Future<Map<String, dynamic>> filterByCategory(String category) async {
     try {
       final result = await getAllProducts();
@@ -367,7 +583,6 @@ class ApiService {
       if (result['success']) {
         List<ProductModel> allProducts = result['data'];
         
-        // Filter by category
         List<ProductModel> filteredProducts = allProducts.where((product) {
           return product.kategori.toLowerCase() == category.toLowerCase();
         }).toList();
@@ -389,11 +604,8 @@ class ApiService {
     }
   }
 
-  // ==================== SORT PRODUCTS ====================
-  List<ProductModel> sortProducts(
-    List<ProductModel> products,
-    String sortBy,
-  ) {
+  /// Sort products
+  List<ProductModel> sortProducts(List<ProductModel> products, String sortBy) {
     List<ProductModel> sortedProducts = List.from(products);
 
     switch (sortBy) {
@@ -412,15 +624,12 @@ class ApiService {
       case 'brand':
         sortedProducts.sort((a, b) => a.brand.compareTo(b.brand));
         break;
-      default:
-        // No sorting
-        break;
     }
 
     return sortedProducts;
   }
 
-  // ==================== GET UNIQUE CATEGORIES ====================
+  /// Get unique categories
   Future<List<String>> getCategories() async {
     try {
       final result = await getAllProducts();
@@ -437,7 +646,7 @@ class ApiService {
     }
   }
 
-  // ==================== GET UNIQUE BRANDS ====================
+  /// Get unique brands
   Future<List<String>> getBrands() async {
     try {
       final result = await getAllProducts();

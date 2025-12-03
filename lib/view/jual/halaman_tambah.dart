@@ -76,7 +76,6 @@ class _HalamanTambahBarangState extends State<HalamanTambahBarang> {
   }
 
   Future<void> _pilihSumberGambar() async {
-    // Tutup keyboard jika terbuka
     FocusScope.of(context).unfocus();
 
     showModalBottomSheet(
@@ -104,14 +103,15 @@ class _HalamanTambahBarangState extends State<HalamanTambahBarang> {
                 leading: const Icon(Icons.camera_alt, color: primaryColor),
                 title: const Text('Kamera'),
                 onTap: () async {
-                  Navigator.pop(context); // Tutup bottom sheet
+                  Navigator.pop(context);
                   try {
                     final path = await _controller.ambilFotoDariKamera();
                     if (path != null && mounted) {
                       setState(() => _pathGambar = path);
+                      _tampilkanSnackBar('Foto berhasil ditambahkan', isSuccess: true);
                     }
                   } catch (e) {
-                    // ignore error
+                    _tampilkanSnackBar('Gagal mengambil foto: $e', isError: true);
                   }
                 },
               ),
@@ -119,14 +119,15 @@ class _HalamanTambahBarangState extends State<HalamanTambahBarang> {
                 leading: const Icon(Icons.photo_library, color: primaryColor),
                 title: const Text('Galeri'),
                 onTap: () async {
-                  Navigator.pop(context); // Tutup bottom sheet
+                  Navigator.pop(context);
                   try {
                     final path = await _controller.ambilFotoDariGaleri();
                     if (path != null && mounted) {
                       setState(() => _pathGambar = path);
+                      _tampilkanSnackBar('Foto berhasil ditambahkan', isSuccess: true);
                     }
                   } catch (e) {
-                    // ignore error
+                    _tampilkanSnackBar('Gagal mengambil foto: $e', isError: true);
                   }
                 },
               ),
@@ -138,7 +139,7 @@ class _HalamanTambahBarangState extends State<HalamanTambahBarang> {
   }
 
   Future<void> _simpanBarang() async {
-    // 1. Matikan Keyboard (PENTING: Mencegah UI glitch/black screen)
+    // Matikan keyboard
     FocusManager.instance.primaryFocus?.unfocus();
 
     if (!_formKey.currentState!.validate()) {
@@ -163,9 +164,12 @@ class _HalamanTambahBarangState extends State<HalamanTambahBarang> {
         throw Exception('User tidak ditemukan. Login ulang diperlukan.');
       }
 
+      print('🔵 Creating product for user: ${user.id}');
+
+      // Buat object barang baru - HARGA TANPA PREFIX "Rp"
       final barangBaru = BarangJualanModel(
         namaBarang: _namaController.text.trim(),
-        harga: 'Rp ${_hargaController.text.trim()}',
+        harga: _hargaController.text.trim(), // Kirim angka saja tanpa "Rp"
         kategori: _kategoriDipilih,
         kondisi: _kondisiDipilih,
         ukuran: _ukuranDipilih,
@@ -179,38 +183,52 @@ class _HalamanTambahBarangState extends State<HalamanTambahBarang> {
         tanggalUpload: DateTime.now().toIso8601String(),
       );
 
+      print('🔵 Product data prepared:');
+      print('   Name: ${barangBaru.namaBarang}');
+      print('   Price: ${barangBaru.harga}');
+      print('   Category: ${barangBaru.kategori}');
+      print('   Brand: ${barangBaru.brand}');
+
+      // Simpan barang (akan otomatis sync ke API jika ada token)
+      print('🔵 Calling tambahBarang...');
       final berhasil = await _controller.tambahBarang(barangBaru);
 
       if (!mounted) return;
 
-      // 2. MATIKAN LOADING SEBELUM PINDAH HALAMAN
       setState(() => _isLoading = false);
 
       if (berhasil) {
-        // Tampilkan notifikasi sukses sebentar
+        print('✅ Product saved successfully');
+        
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Berhasil! Mengalihkan ke Item Saya...'),
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 12),
+                Text('Berhasil! Barang telah ditambahkan'),
+              ],
+            ),
             backgroundColor: Colors.green,
-            duration: Duration(milliseconds: 1000),
+            duration: Duration(milliseconds: 2000),
           ),
         );
 
-        // Tunggu sebentar biar UX lebih halus
         await Future.delayed(const Duration(milliseconds: 500));
 
         if (!mounted) return;
 
-        // 3. NAVIGASI YANG BENAR: Ganti halaman ini dengan MyItemsPage
-        // Ini akan membuang halaman "Tambah Barang" dari stack, jadi tidak bisa kembali ke sini (bagus untuk form)
+        // Navigasi ke MyItemsPage
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const MyItemsPage()),
         );
       } else {
-        _tampilkanSnackBar('Gagal menyimpan barang', isError: true);
+        print('❌ Failed to save product');
+        _tampilkanSnackBar('Gagal menyimpan barang. Silakan coba lagi.', isError: true);
       }
     } catch (e) {
+      print('❌ Exception in _simpanBarang: $e');
       if (mounted) {
         setState(() => _isLoading = false);
         _tampilkanSnackBar('Error: ${e.toString()}', isError: true);
@@ -240,7 +258,8 @@ class _HalamanTambahBarangState extends State<HalamanTambahBarang> {
         backgroundColor:
             isSuccess ? Colors.green : (isError ? Colors.red : Colors.orange),
         behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
+        duration: const Duration(seconds: 3),
+        margin: const EdgeInsets.all(16),
       ),
     );
   }
@@ -268,6 +287,10 @@ class _HalamanTambahBarangState extends State<HalamanTambahBarang> {
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: Colors.red),
       ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Colors.red, width: 2),
+      ),
     );
   }
 
@@ -275,7 +298,6 @@ class _HalamanTambahBarangState extends State<HalamanTambahBarang> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: backgroundColor,
-      // AppBar
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -288,7 +310,6 @@ class _HalamanTambahBarangState extends State<HalamanTambahBarang> {
           style: TextStyle(color: textDark, fontWeight: FontWeight.bold),
         ),
       ),
-      // Body
       body: Form(
         key: _formKey,
         child: ListView(
@@ -302,7 +323,10 @@ class _HalamanTambahBarangState extends State<HalamanTambahBarang> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: borderColor),
+                  border: Border.all(
+                    color: _pathGambar == null ? borderColor : primaryColor,
+                    width: _pathGambar == null ? 1 : 2,
+                  ),
                 ),
                 child: _pathGambar == null
                     ? const Column(
@@ -310,10 +334,21 @@ class _HalamanTambahBarangState extends State<HalamanTambahBarang> {
                         children: [
                           Icon(Icons.add_a_photo, size: 48, color: textLight),
                           SizedBox(height: 8),
-                          Text('Tambah Foto Barang',
-                              style: TextStyle(
-                                  color: textLight,
-                                  fontWeight: FontWeight.bold)),
+                          Text(
+                            'Tambah Foto Barang',
+                            style: TextStyle(
+                              color: textLight,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'Wajib diisi',
+                            style: TextStyle(
+                              color: Colors.red,
+                              fontSize: 12,
+                            ),
+                          ),
                         ],
                       )
                     : Stack(
@@ -332,11 +367,11 @@ class _HalamanTambahBarangState extends State<HalamanTambahBarang> {
                             right: 8,
                             child: CircleAvatar(
                               backgroundColor: Colors.red,
-                              radius: 16,
+                              radius: 18,
                               child: IconButton(
                                 padding: EdgeInsets.zero,
                                 icon: const Icon(Icons.close,
-                                    color: Colors.white, size: 16),
+                                    color: Colors.white, size: 18),
                                 onPressed: () =>
                                     setState(() => _pathGambar = null),
                               ),
@@ -351,8 +386,9 @@ class _HalamanTambahBarangState extends State<HalamanTambahBarang> {
 
             TextFormField(
               controller: _namaController,
-              decoration: _inputDecoration('Nama Barang'),
+              decoration: _inputDecoration('Nama Barang *'),
               validator: (v) => v!.trim().isEmpty ? 'Wajib diisi' : null,
+              textCapitalization: TextCapitalization.words,
             ),
 
             const SizedBox(height: 16),
@@ -360,15 +396,19 @@ class _HalamanTambahBarangState extends State<HalamanTambahBarang> {
             TextFormField(
               controller: _hargaController,
               keyboardType: TextInputType.number,
-              decoration: _inputDecoration('Harga (Angka saja)'),
-              validator: (v) => v!.trim().isEmpty ? 'Wajib diisi' : null,
+              decoration: _inputDecoration('Harga (Rp) *'),
+              validator: (v) {
+                if (v!.trim().isEmpty) return 'Wajib diisi';
+                if (int.tryParse(v.trim()) == null) return 'Harus angka';
+                return null;
+              },
             ),
 
             const SizedBox(height: 16),
 
             DropdownButtonFormField<String>(
               value: _kategoriDipilih,
-              decoration: _inputDecoration('Kategori'),
+              decoration: _inputDecoration('Kategori *'),
               items: _kategoriList
                   .map((k) => DropdownMenuItem(value: k, child: Text(k)))
                   .toList(),
@@ -379,15 +419,16 @@ class _HalamanTambahBarangState extends State<HalamanTambahBarang> {
 
             TextFormField(
               controller: _brandController,
-              decoration: _inputDecoration('Brand'),
+              decoration: _inputDecoration('Brand *'),
               validator: (v) => v!.trim().isEmpty ? 'Wajib diisi' : null,
+              textCapitalization: TextCapitalization.words,
             ),
 
             const SizedBox(height: 16),
 
             DropdownButtonFormField<String>(
               value: _kondisiDipilih,
-              decoration: _inputDecoration('Kondisi'),
+              decoration: _inputDecoration('Kondisi *'),
               items: _kondisiList
                   .map((k) => DropdownMenuItem(value: k, child: Text(k)))
                   .toList(),
@@ -398,7 +439,7 @@ class _HalamanTambahBarangState extends State<HalamanTambahBarang> {
 
             DropdownButtonFormField<String>(
               value: _ukuranDipilih,
-              decoration: _inputDecoration('Ukuran'),
+              decoration: _inputDecoration('Ukuran *'),
               items: _ukuranList
                   .map((u) => DropdownMenuItem(value: u, child: Text(u)))
                   .toList(),
@@ -409,16 +450,18 @@ class _HalamanTambahBarangState extends State<HalamanTambahBarang> {
 
             TextFormField(
               controller: _bahanController,
-              decoration: _inputDecoration('Bahan'),
+              decoration: _inputDecoration('Bahan *'),
               validator: (v) => v!.trim().isEmpty ? 'Wajib diisi' : null,
+              textCapitalization: TextCapitalization.words,
             ),
 
             const SizedBox(height: 16),
 
             TextFormField(
               controller: _lokasiController,
-              decoration: _inputDecoration('Lokasi'),
+              decoration: _inputDecoration('Lokasi *'),
               validator: (v) => v!.trim().isEmpty ? 'Wajib diisi' : null,
+              textCapitalization: TextCapitalization.words,
             ),
 
             const SizedBox(height: 16),
@@ -426,8 +469,12 @@ class _HalamanTambahBarangState extends State<HalamanTambahBarang> {
             TextFormField(
               controller: _kontakController,
               keyboardType: TextInputType.phone,
-              decoration: _inputDecoration('Nomor HP/WA'),
-              validator: (v) => v!.trim().isEmpty ? 'Wajib diisi' : null,
+              decoration: _inputDecoration('Nomor HP/WA *'),
+              validator: (v) {
+                if (v!.trim().isEmpty) return 'Wajib diisi';
+                if (v.trim().length < 10) return 'Nomor tidak valid';
+                return null;
+              },
             ),
 
             const SizedBox(height: 16),
@@ -435,8 +482,9 @@ class _HalamanTambahBarangState extends State<HalamanTambahBarang> {
             TextFormField(
               controller: _deskripsiController,
               maxLines: 4,
-              decoration: _inputDecoration('Deskripsi Lengkap'),
+              decoration: _inputDecoration('Deskripsi Lengkap *'),
               validator: (v) => v!.trim().isEmpty ? 'Wajib diisi' : null,
+              textCapitalization: TextCapitalization.sentences,
             ),
 
             const SizedBox(height: 30),
@@ -450,10 +498,18 @@ class _HalamanTambahBarangState extends State<HalamanTambahBarang> {
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
-                  elevation: 0,
+                  elevation: 2,
+                  disabledBackgroundColor: primaryColor.withOpacity(0.6),
                 ),
                 child: _isLoading
-                    ? const CircularProgressIndicator(color: Colors.white)
+                    ? const SizedBox(
+                        height: 24,
+                        width: 24,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2.5,
+                        ),
+                      )
                     : const Text(
                         'Simpan Barang',
                         style: TextStyle(

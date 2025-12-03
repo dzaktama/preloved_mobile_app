@@ -40,52 +40,100 @@ class _RegisterPageState extends State<RegisterPage> {
     super.dispose();
   }
 
- Future<void> _handleRegister() async {
-  if (!_formKey.currentState!.validate()) return;
+  Future<void> _handleRegister() async {
+    if (!_formKey.currentState!.validate()) return;
 
-  if (!_acceptTerms) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Please accept terms and conditions')),
-    );
-    return;
+    if (!_acceptTerms) {
+      _showErrorSnackbar('Anda harus menyetujui syarat dan ketentuan');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final newUser = UserModel(
+        uName: _nameController.text.trim(),
+        uEmail: _emailController.text.trim(),
+        uPassword: _passwordController.text,
+        uPhone: _phoneController.text.trim(),
+        uAddress: '',
+      );
+
+      print('🔵 RegisterPage: Attempting registration...');
+      bool berhasil = await _authController.register(newUser);
+      print('🔵 RegisterPage: Registration result: $berhasil');
+
+      if (!mounted) return;
+
+      setState(() => _isLoading = false);
+
+      if (berhasil) {
+        _showSuccessSnackbar('Akun berhasil dibuat! Silakan login');
+        
+        // Tunggu sebentar agar snackbar terlihat
+        await Future.delayed(const Duration(milliseconds: 500));
+        
+        if (!mounted) return;
+        Navigator.pop(context);
+      } else {
+        _showErrorSnackbar(
+          'Registrasi gagal! Cek console untuk detail error.',
+        );
+      }
+    } catch (e) {
+      print('❌ RegisterPage: Exception: $e');
+      if (!mounted) return;
+      
+      setState(() => _isLoading = false);
+      _showErrorSnackbar('Terjadi kesalahan: $e');
+    }
   }
 
-  setState(() => _isLoading = true);
-
-  await Future.delayed(const Duration(milliseconds: 1500));
-
-  final newUser = UserModel(
-    uName: _nameController.text,
-    uEmail: _emailController.text,
-    uPassword: _passwordController.text,
-    uPhone: _phoneController.text,
-    uAddress: '', 
-  );
-
-  if (!mounted) return;
-
-  bool berhasil = await _authController.register(newUser);
-
-  if (!mounted) return;
-  setState(() => _isLoading = false);
-
-  if (berhasil) {
+  void _showErrorSnackbar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Akun berhasil dibuat! Silakan login'),
-        backgroundColor: Colors.green,
-      ),
-    );
-    Navigator.pop(context); 
-  } else {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Email udah dipake orang lain, coba ganti'),
-        backgroundColor: Colors.red,
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.error_outline, color: Colors.white),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(fontSize: 13),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.red[700],
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        duration: const Duration(seconds: 5),
+        margin: const EdgeInsets.all(16),
       ),
     );
   }
-}
+
+  void _showSuccessSnackbar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle_outline, color: Colors.white),
+            const SizedBox(width: 12),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: Colors.green[700],
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -123,11 +171,11 @@ class _RegisterPageState extends State<RegisterPage> {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 16,
-                    // FIX: Ganti withOpacity jadi withValues
                     color: textLight.withValues(alpha: 0.8),
                   ),
                 ),
                 const SizedBox(height: 40),
+
                 Form(
                   key: _formKey,
                   child: Column(
@@ -135,49 +183,79 @@ class _RegisterPageState extends State<RegisterPage> {
                       TextFormField(
                         controller: _nameController,
                         style: const TextStyle(color: textDark),
-                        decoration:
-                            _inputDecoration('Full Name', Icons.person_outline),
+                        decoration: _inputDecoration(
+                          'Full Name',
+                          Icons.person_outline,
+                        ),
                         validator: (value) {
-                          if (value == null || value.isEmpty)
-                            return 'Please enter your name';
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Nama tidak boleh kosong';
+                          }
+                          if (value.trim().length < 3) {
+                            return 'Nama minimal 3 karakter';
+                          }
                           return null;
                         },
                       ),
                       const SizedBox(height: 20),
+
                       TextFormField(
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
                         style: const TextStyle(color: textDark),
-                        decoration:
-                            _inputDecoration('Email', Icons.email_outlined),
+                        decoration: _inputDecoration(
+                          'Email',
+                          Icons.email_outlined,
+                        ),
                         validator: (value) {
-                          if (value == null || value.isEmpty)
-                            return 'Please enter email';
-                          if (!value.contains('@')) return 'Invalid email';
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Email tidak boleh kosong';
+                          }
+                          if (!value.contains('@')) {
+                            return 'Format email tidak valid';
+                          }
+                          // Validasi email lebih ketat
+                          final emailRegex = RegExp(
+                            r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                          );
+                          if (!emailRegex.hasMatch(value)) {
+                            return 'Format email tidak valid';
+                          }
                           return null;
                         },
                       ),
                       const SizedBox(height: 20),
+
                       TextFormField(
                         controller: _phoneController,
                         keyboardType: TextInputType.phone,
                         style: const TextStyle(color: textDark),
                         decoration: _inputDecoration(
-                            'Phone Number', Icons.phone_outlined),
+                          'Phone Number',
+                          Icons.phone_outlined,
+                        ),
                         validator: (value) {
-                          if (value == null || value.isEmpty)
-                            return 'Please enter phone number';
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Nomor telepon tidak boleh kosong';
+                          }
+                          // Hapus spasi dan karakter non-digit
+                          final cleanNumber = value.replaceAll(RegExp(r'\D'), '');
+                          if (cleanNumber.length < 10) {
+                            return 'Nomor telepon minimal 10 digit';
+                          }
                           return null;
                         },
                       ),
                       const SizedBox(height: 20),
+
                       TextFormField(
                         controller: _passwordController,
                         obscureText: _obscurePassword,
                         style: const TextStyle(color: textDark),
-                        decoration:
-                            _inputDecoration('Password', Icons.lock_outline)
-                                .copyWith(
+                        decoration: _inputDecoration(
+                          'Password',
+                          Icons.lock_outline,
+                        ).copyWith(
                           suffixIcon: IconButton(
                             icon: Icon(
                               _obscurePassword
@@ -186,24 +264,30 @@ class _RegisterPageState extends State<RegisterPage> {
                               color: textLight,
                             ),
                             onPressed: () => setState(
-                                () => _obscurePassword = !_obscurePassword),
+                              () => _obscurePassword = !_obscurePassword,
+                            ),
                           ),
                         ),
                         validator: (value) {
-                          if (value == null || value.isEmpty)
-                            return 'Please enter password';
-                          if (value.length < 6) return 'Min 6 characters';
+                          if (value == null || value.isEmpty) {
+                            return 'Password tidak boleh kosong';
+                          }
+                          if (value.length < 6) {
+                            return 'Password minimal 6 karakter';
+                          }
                           return null;
                         },
                       ),
                       const SizedBox(height: 20),
+
                       TextFormField(
                         controller: _confirmPasswordController,
                         obscureText: _obscureConfirmPassword,
                         style: const TextStyle(color: textDark),
                         decoration: _inputDecoration(
-                                'Confirm Password', Icons.lock_outline)
-                            .copyWith(
+                          'Confirm Password',
+                          Icons.lock_outline,
+                        ).copyWith(
                           suffixIcon: IconButton(
                             icon: Icon(
                               _obscureConfirmPassword
@@ -211,21 +295,27 @@ class _RegisterPageState extends State<RegisterPage> {
                                   : Icons.visibility_off_outlined,
                               color: textLight,
                             ),
-                            onPressed: () => setState(() =>
-                                _obscureConfirmPassword =
-                                    !_obscureConfirmPassword),
+                            onPressed: () => setState(
+                              () => _obscureConfirmPassword = !_obscureConfirmPassword,
+                            ),
                           ),
                         ),
                         validator: (value) {
-                          if (value != _passwordController.text)
-                            return 'Passwords do not match';
+                          if (value == null || value.isEmpty) {
+                            return 'Konfirmasi password tidak boleh kosong';
+                          }
+                          if (value != _passwordController.text) {
+                            return 'Password tidak cocok';
+                          }
                           return null;
                         },
                       ),
                     ],
                   ),
                 ),
+
                 const SizedBox(height: 20),
+
                 Row(
                   children: [
                     SizedBox(
@@ -237,23 +327,31 @@ class _RegisterPageState extends State<RegisterPage> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(4),
                         ),
-                        onChanged: (value) =>
-                            setState(() => _acceptTerms = value!),
+                        onChanged: (value) => setState(
+                          () => _acceptTerms = value ?? false,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: Text(
-                        'I accept the Terms & Conditions',
-                        // FIX: Ganti withOpacity
-                        style: TextStyle(
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() => _acceptTerms = !_acceptTerms);
+                        },
+                        child: Text(
+                          'I accept the Terms & Conditions',
+                          style: TextStyle(
                             color: textLight.withValues(alpha: 0.8),
-                            fontSize: 14),
+                            fontSize: 14,
+                          ),
+                        ),
                       ),
                     ),
                   ],
                 ),
+
                 const SizedBox(height: 32),
+
                 SizedBox(
                   height: 56,
                   child: ElevatedButton(
@@ -265,35 +363,45 @@ class _RegisterPageState extends State<RegisterPage> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
+                      disabledBackgroundColor: primaryColor.withValues(alpha: 0.6),
                     ),
                     child: _isLoading
                         ? const SizedBox(
                             height: 24,
                             width: 24,
                             child: CircularProgressIndicator(
-                                color: Colors.white, strokeWidth: 2.5),
+                              color: Colors.white,
+                              strokeWidth: 2.5,
+                            ),
                           )
                         : const Text(
                             'Sign Up',
                             style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 0.5),
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
                           ),
                   ),
                 ),
+
                 const SizedBox(height: 32),
+
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text("Already have an account? ",
-                        style: TextStyle(color: textLight)),
+                    const Text(
+                      "Already have an account? ",
+                      style: TextStyle(color: textLight),
+                    ),
                     GestureDetector(
                       onTap: () => Navigator.pop(context),
                       child: const Text(
                         'Sign In',
                         style: TextStyle(
-                            color: primaryColor, fontWeight: FontWeight.bold),
+                          color: primaryColor,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ],

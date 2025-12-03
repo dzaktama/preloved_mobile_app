@@ -1,3 +1,4 @@
+// lib/services/database_helper.dart
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
@@ -9,7 +10,7 @@ class DatabaseHelper {
 
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await _initDB('preloved.db');
+    _database = await _initDB('preloved_app.db');
     return _database!;
   }
 
@@ -19,242 +20,276 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 3, // UPDATED VERSION untuk migration (added session.token)
+      version: 4, // ⚠️ PENTING: Naikkan version untuk trigger migration
       onCreate: _createDB,
-      onUpgrade: _onUpgrade,
+      onUpgrade: _upgradeDB,
     );
   }
 
-  Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    if (oldVersion < 2) {
-      // Tambah kolom rating di users table
-      await db.execute('ALTER TABLE users ADD COLUMN rating REAL DEFAULT 0.0');
-      await db.execute('ALTER TABLE users ADD COLUMN total_reviews INTEGER DEFAULT 0');
-      await db.execute('ALTER TABLE users ADD COLUMN response_rate REAL DEFAULT 100.0');
-      await db.execute('ALTER TABLE users ADD COLUMN bio TEXT');
-      await db.execute('ALTER TABLE users ADD COLUMN join_date TEXT');
-      
-      // Create chat tables
-      await _createChatTables(db);
-      
-      // Create review table
-      await _createReviewTable(db);
-    }
-    if (oldVersion < 3) {
-      // Add token column to session table to store API auth token
-      try {
-        await db.execute('ALTER TABLE session ADD COLUMN token TEXT');
-      } catch (_) {
-        // ignore if column already exists
-      }
-    }
-  }
-
-  Future _createDB(Database db, int version) async {
-    const idType = 'INTEGER PRIMARY KEY AUTOINCREMENT';
-    const textType = 'TEXT NOT NULL';
-    const textTypeNull = 'TEXT';
-    const intType = 'INTEGER NOT NULL';
-    const realType = 'REAL NOT NULL';
-
-    // Table Users (UPDATED with new fields)
+  // Create tables untuk database baru
+  Future<void> _createDB(Database db, int version) async {
+    print('🔵 Creating database version $version...');
+    
+    // Tabel users
     await db.execute('''
       CREATE TABLE users (
-        id $idType,
-        name $textType,
-        email $textType UNIQUE,
-        password $textType,
-        phone $textTypeNull,
-        address $textTypeNull,
-        foto_profil $textTypeNull,
-        role $textType DEFAULT 'user',
-        created_at $textType,
-        rating REAL DEFAULT 0.0,
-        total_reviews INTEGER DEFAULT 0,
-        response_rate REAL DEFAULT 100.0,
-        bio $textTypeNull,
-        join_date $textTypeNull
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        email TEXT NOT NULL UNIQUE,
+        phone TEXT,
+        address TEXT,
+        foto_profil TEXT,
+        password TEXT NOT NULL,
+        created_at TEXT,
+        token TEXT
       )
     ''');
 
-    // Table Session
-    await db.execute('''
-      CREATE TABLE session (
-        id $idType,
-        is_login $intType DEFAULT 0,
-        user_id $intType,
-        token TEXT,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-      )
-    ''');
-
-    // Table Addresses
-    await db.execute('''
-      CREATE TABLE addresses (
-        id $idType,
-        user_id $intType,
-        nama_lengkap $textType,
-        nomor_telepon $textType,
-        alamat_lengkap $textType,
-        kota $textType,
-        provinsi $textType,
-        kode_pos $textType,
-        is_primary $intType DEFAULT 0,
-        label $textType DEFAULT 'Rumah',
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-      )
-    ''');
-
-    // Table Barang Jualan
+    // Tabel barang_jualan dengan kolom lengkap
     await db.execute('''
       CREATE TABLE barang_jualan (
-        id $idType,
-        nama_barang $textType,
-        harga $textType,
-        kategori $textType,
-        kondisi $textType,
-        ukuran $textType,
-        brand $textType,
-        bahan $textType,
-        deskripsi $textType,
-        lokasi $textType,
-        kontak_penjual $textType,
-        path_gambar $textType,
-        id_penjual $intType,
-        tanggal_upload $textType,
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nama_barang TEXT NOT NULL,
+        harga TEXT NOT NULL,
+        kategori TEXT NOT NULL,
+        kondisi TEXT NOT NULL,
+        ukuran TEXT NOT NULL,
+        brand TEXT NOT NULL,
+        bahan TEXT NOT NULL,
+        deskripsi TEXT NOT NULL,
+        lokasi TEXT NOT NULL,
+        kontak_penjual TEXT NOT NULL,
+        path_gambar TEXT,
+        gambar_url TEXT,
+        id_penjual INTEGER NOT NULL,
+        user_id TEXT,
+        tanggal_upload TEXT NOT NULL,
         FOREIGN KEY (id_penjual) REFERENCES users (id) ON DELETE CASCADE
       )
     ''');
 
-    // Table Cart
+    // ✅ TABEL SESSION (BARU)
     await db.execute('''
-      CREATE TABLE cart (
-        id $idType,
-        user_id $intType,
-        id_produk $textType,
-        jumlah $intType,
+      CREATE TABLE session (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        token TEXT,
+        is_login INTEGER DEFAULT 0,
+        last_login TEXT,
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
       )
     ''');
 
-    // Table Transaksi
-    await db.execute('''
-      CREATE TABLE transaksi (
-        id $idType,
-        id_transaksi $textType UNIQUE,
-        user_id $intType,
-        tanggal_transaksi $textType,
-        total_harga $realType,
-        ongkir $realType,
-        status $textType,
-        metode_pembayaran $textTypeNull,
-        alamat_pengiriman $textTypeNull,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-      )
-    ''');
-
-    // Table Item Transaksi
-    await db.execute('''
-      CREATE TABLE item_transaksi (
-        id $idType,
-        transaksi_id $intType,
-        id_produk $textType,
-        nama_produk $textType,
-        brand $textTypeNull,
-        jumlah $intType,
-        harga $realType,
-        gambar $textTypeNull,
-        FOREIGN KEY (transaksi_id) REFERENCES transaksi (id) ON DELETE CASCADE
-      )
-    ''');
-
-    // Create chat tables
-    await _createChatTables(db);
-    
-    // Create review table
-    await _createReviewTable(db);
+    print('✅ Database created successfully with session table');
   }
 
-  Future<void> _createChatTables(Database db) async {
-    const idType = 'INTEGER PRIMARY KEY AUTOINCREMENT';
-    const textType = 'TEXT NOT NULL';
-    const textTypeNull = 'TEXT';
-    const intType = 'INTEGER NOT NULL';
+  // Upgrade database untuk versi lama
+  Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
+    print('🔄 Upgrading database from v$oldVersion to v$newVersion...');
 
-    // Table Chat Rooms (Conversation between 2 users)
-    await db.execute('''
-      CREATE TABLE chat_rooms (
-        id $idType,
-        user1_id $intType,
-        user2_id $intType,
-        last_message $textTypeNull,
-        last_message_time $textTypeNull,
-        unread_count_user1 INTEGER DEFAULT 0,
-        unread_count_user2 INTEGER DEFAULT 0,
-        created_at $textType,
-        FOREIGN KEY (user1_id) REFERENCES users (id) ON DELETE CASCADE,
-        FOREIGN KEY (user2_id) REFERENCES users (id) ON DELETE CASCADE,
-        UNIQUE(user1_id, user2_id)
-      )
-    ''');
+    // Upgrade dari v1 ke v2
+    if (oldVersion < 2) {
+      try {
+        await db.execute('ALTER TABLE barang_jualan ADD COLUMN gambar_url TEXT');
+        print('✅ Added column: gambar_url');
+      } catch (e) {
+        print('⚠️ Column gambar_url might already exist: $e');
+      }
+    }
 
-    // Table Messages
-    await db.execute('''
-      CREATE TABLE messages (
-        id $idType,
-        chat_room_id $intType,
-        sender_id $intType,
-        receiver_id $intType,
-        message $textType,
-        is_read INTEGER DEFAULT 0,
-        created_at $textType,
-        FOREIGN KEY (chat_room_id) REFERENCES chat_rooms (id) ON DELETE CASCADE,
-        FOREIGN KEY (sender_id) REFERENCES users (id) ON DELETE CASCADE,
-        FOREIGN KEY (receiver_id) REFERENCES users (id) ON DELETE CASCADE
-      )
-    ''');
+    // Upgrade dari v2 ke v3
+    if (oldVersion < 3) {
+      try {
+        await db.execute('ALTER TABLE barang_jualan ADD COLUMN user_id TEXT');
+        print('✅ Added column: user_id');
+      } catch (e) {
+        print('⚠️ Column user_id might already exist: $e');
+      }
+    }
+
+    // Upgrade dari v3 ke v4 - TAMBAH TABEL SESSION
+    if (oldVersion < 4) {
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS session (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            token TEXT,
+            is_login INTEGER DEFAULT 0,
+            last_login TEXT,
+            FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+          )
+        ''');
+        print('✅ Created table: session');
+      } catch (e) {
+        print('⚠️ Session table might already exist: $e');
+      }
+    }
+
+    print('✅ Database upgraded successfully');
   }
 
-  Future<void> _createReviewTable(Database db) async {
-    const idType = 'INTEGER PRIMARY KEY AUTOINCREMENT';
-    const textType = 'TEXT NOT NULL';
-    const textTypeNull = 'TEXT';
-    const intType = 'INTEGER NOT NULL';
-    const realType = 'REAL NOT NULL';
-
-    // Table Reviews
-    await db.execute('''
-      CREATE TABLE reviews (
-        id $idType,
-        seller_id $intType,
-        buyer_id $intType,
-        transaksi_id $textTypeNull,
-        rating $realType,
-        review_text $textTypeNull,
-        created_at $textType,
-        FOREIGN KEY (seller_id) REFERENCES users (id) ON DELETE CASCADE,
-        FOREIGN KEY (buyer_id) REFERENCES users (id) ON DELETE CASCADE
-      )
-    ''');
+  // Query helper methods
+  Future<List<Map<String, dynamic>>> query(String table) async {
+    final db = await instance.database;
+    return db.query(table);
   }
 
-  Future close() async {
+  Future<int> insert(String table, Map<String, dynamic> row) async {
+    final db = await instance.database;
+    return await db.insert(table, row);
+  }
+
+  Future<int> update(String table, Map<String, dynamic> row, String where, List<dynamic> whereArgs) async {
+    final db = await instance.database;
+    return await db.update(table, row, where: where, whereArgs: whereArgs);
+  }
+
+  Future<int> delete(String table, String where, List<dynamic> whereArgs) async {
+    final db = await instance.database;
+    return await db.delete(table, where: where, whereArgs: whereArgs);
+  }
+
+  // Close database
+  Future<void> close() async {
     final db = await instance.database;
     db.close();
   }
 
-  // Helper method untuk clear semua data (untuk testing)
+  // Clear all data (untuk testing)
   Future<void> clearAllData() async {
     final db = await instance.database;
-    await db.delete('messages');
-    await db.delete('chat_rooms');
-    await db.delete('reviews');
-    await db.delete('item_transaksi');
-    await db.delete('transaksi');
-    await db.delete('cart');
     await db.delete('barang_jualan');
-    await db.delete('addresses');
-    await db.delete('session');
     await db.delete('users');
+    await db.delete('session');
+    print('✅ All data cleared');
+  }
+
+  // Delete database (untuk fresh start)
+  Future<void> deleteDatabase() async {
+    final dbPath = await getDatabasesPath();
+    final path = join(dbPath, 'preloved_app.db');
+    await databaseFactory.deleteDatabase(path);
+    _database = null;
+    print('✅ Database deleted');
+  }
+
+  // Check database schema
+  Future<void> checkSchema() async {
+    final db = await instance.database;
+    
+    print('🔍 Checking database schema...');
+    
+    // Check barang_jualan table structure
+    final barangSchema = await db.rawQuery('PRAGMA table_info(barang_jualan)');
+    print('📋 barang_jualan columns:');
+    for (var col in barangSchema) {
+      print('   - ${col['name']} (${col['type']})');
+    }
+    
+    // Check users table structure
+    final usersSchema = await db.rawQuery('PRAGMA table_info(users)');
+    print('📋 users columns:');
+    for (var col in usersSchema) {
+      print('   - ${col['name']} (${col['type']})');
+    }
+
+    // Check session table structure
+    try {
+      final sessionSchema = await db.rawQuery('PRAGMA table_info(session)');
+      print('📋 session columns:');
+      for (var col in sessionSchema) {
+        print('   - ${col['name']} (${col['type']})');
+      }
+    } catch (e) {
+      print('⚠️ Session table does not exist: $e');
+    }
+  }
+
+  // ==================== SESSION METHODS ====================
+  
+  /// Simpan session login
+  Future<bool> saveSession({
+    required int userId,
+    required String token,
+  }) async {
+    try {
+      final db = await instance.database;
+      
+      // Clear previous sessions
+      await db.delete('session', where: 'is_login = ?', whereArgs: [1]);
+      
+      // Insert new session
+      await db.insert('session', {
+        'user_id': userId,
+        'token': token,
+        'is_login': 1,
+        'last_login': DateTime.now().toIso8601String(),
+      });
+      
+      print('✅ Session saved for user $userId');
+      return true;
+    } catch (e) {
+      print('❌ Error saving session: $e');
+      return false;
+    }
+  }
+
+  /// Get active session
+  Future<Map<String, dynamic>?> getActiveSession() async {
+    try {
+      final db = await instance.database;
+      
+      final result = await db.query(
+        'session',
+        where: 'is_login = ?',
+        whereArgs: [1],
+        limit: 1,
+      );
+      
+      if (result.isNotEmpty) {
+        return result.first;
+      }
+      return null;
+    } catch (e) {
+      print('❌ Error getting session: $e');
+      return null;
+    }
+  }
+
+  /// Clear session (logout)
+  Future<bool> clearSession() async {
+    try {
+      final db = await instance.database;
+      await db.delete('session', where: 'is_login = ?', whereArgs: [1]);
+      print('✅ Session cleared');
+      return true;
+    } catch (e) {
+      print('❌ Error clearing session: $e');
+      return false;
+    }
+  }
+
+  /// Update session token
+  Future<bool> updateSessionToken(String newToken) async {
+    try {
+      final db = await instance.database;
+      
+      final updated = await db.update(
+        'session',
+        {'token': newToken},
+        where: 'is_login = ?',
+        whereArgs: [1],
+      );
+      
+      if (updated > 0) {
+        print('✅ Session token updated');
+        return true;
+      }
+      return false;
+    } catch (e) {
+      print('❌ Error updating session token: $e');
+      return false;
+    }
   }
 }
